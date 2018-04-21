@@ -48,6 +48,10 @@ namespace Basic
                 c.OperationFilter<AssignOperationVendorExtensions>();
                 c.OperationFilter<FormDataOperationFilter>();
 
+                c.DescribeAllEnumsAsStrings();
+
+                c.SchemaFilter<ExamplesSchemaFilter>();
+
                 //c.DescribeAllParametersInCamelCase();
             });
 
@@ -56,7 +60,7 @@ namespace Basic
                 services.ConfigureSwaggerGen(c =>
                 {
                     var xmlCommentsPath = Path.Combine(System.AppContext.BaseDirectory, "Basic.xml");
-                    c.IncludeXmlComments(xmlCommentsPath);
+                    c.IncludeXmlComments(xmlCommentsPath, true);
                 });
             }
         }

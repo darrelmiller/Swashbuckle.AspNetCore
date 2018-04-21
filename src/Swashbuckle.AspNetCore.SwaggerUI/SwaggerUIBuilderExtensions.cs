@@ -7,11 +7,11 @@ namespace Microsoft.AspNetCore.Builder
 {
     public static class SwaggerUIBuilderExtensions
     {
-        private const string EmbeddedFilesNamespace = "Swashbuckle.AspNetCore.SwaggerUI.bower_components.swagger_ui.dist";
+        private const string EmbeddedFilesNamespace = "Swashbuckle.AspNetCore.SwaggerUI.node_modules.swagger_ui_dist";
 
         public static IApplicationBuilder UseSwaggerUI(
             this IApplicationBuilder app,
-            Action<SwaggerUIOptions> setupAction)
+            Action<SwaggerUIOptions> setupAction = null)
         {
             var options = new SwaggerUIOptions();
             setupAction?.Invoke(options);
@@ -23,7 +23,6 @@ namespace Microsoft.AspNetCore.Builder
             {
                 RequestPath = string.IsNullOrEmpty(options.RoutePrefix) ? string.Empty : $"/{options.RoutePrefix}",
                 FileProvider = new EmbeddedFileProvider(typeof(SwaggerUIBuilderExtensions).GetTypeInfo().Assembly, EmbeddedFilesNamespace),
-                EnableDirectoryBrowsing = true // will redirect to /{options.RoutePrefix}/ when trailing slash is missing
             });
 
             return app;

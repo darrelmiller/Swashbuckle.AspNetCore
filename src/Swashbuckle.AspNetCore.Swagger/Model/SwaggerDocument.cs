@@ -226,9 +226,6 @@ namespace Swashbuckle.AspNetCore.Swagger
 
         public bool Required { get; set; }
 
-        [JsonProperty("$ref")]
-        public string Ref { get; set; }
-
         [JsonExtensionData]
         public Dictionary<string, object> Extensions { get; private set; }
     }
@@ -344,6 +341,11 @@ namespace Swashbuckle.AspNetCore.Swagger
 
     public class Response
     {
+        public Response()
+        {
+            Extensions = new Dictionary<string, object>();
+        }
+
         public string Description { get; set; }
 
         public Schema Schema { get; set; }

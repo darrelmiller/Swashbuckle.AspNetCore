@@ -77,6 +77,7 @@ namespace OAuth2Integration
                         { "writeAccess", "Access write operations" }
                     }
                 });
+
                 // Assign scope requirements to operations based on AuthorizeAttribute
                 c.OperationFilter<SecurityRequirementsOperationFilter>();
             });
@@ -106,7 +107,6 @@ namespace OAuth2Integration
                 resourceServer.UseSwaggerUI(c =>
                 {
                     c.SwaggerEndpoint("/resource-server/swagger/v1/swagger.json", "My API V1");
-                    c.OAuth2RedirectUrl("http://localhost:50581/resource-server/swagger/oauth2-redirect.html");
 
                     // Additional OAuth settings (See https://github.com/swagger-api/swagger-ui/blob/v3.10.0/docs/usage/oauth2.md)
                     c.OAuthClientId("test-id");

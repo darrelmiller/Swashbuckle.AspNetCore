@@ -4,6 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Basic.Controllers
 {
+    /// <summary>
+    /// Summary for CrudActionsController
+    /// </summary>
     [Route("/products")]
     [Produces("application/json")]
     public class CrudActionsController
@@ -24,9 +27,9 @@ namespace Basic.Controllers
         /// <param name="product"></param>
         /// <returns></returns>
         [HttpPost]
-        public int Create([FromBody, Required]Product product)
+        public Product Create([FromBody, Required]Product product)
         {
-            return 1;
+            return product;
         }
 
         /// <summary>
@@ -88,7 +91,6 @@ namespace Basic.Controllers
     public enum ProductStatus
     {
         All = 0,
-        [Display(Name = "Out Of Stock")]
         OutOfStock = 1,
         InStock = 2
     }

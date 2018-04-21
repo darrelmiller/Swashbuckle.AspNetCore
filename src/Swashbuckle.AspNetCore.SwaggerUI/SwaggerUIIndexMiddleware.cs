@@ -2,8 +2,13 @@
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Microsoft.AspNetCore.Routing.Template;
+using Microsoft.AspNetCore.Routing;
 
 namespace Swashbuckle.AspNetCore.SwaggerUI
 {
@@ -20,22 +25,38 @@ namespace Swashbuckle.AspNetCore.SwaggerUI
 
         public async Task Invoke(HttpContext httpContext)
         {
-            if (!RequestingSwaggerUIIndex(httpContext.Request))
+            var httpMethod = httpContext.Request.Method;
+            var path = httpContext.Request.Path.Value;
+
+            // If the RoutePrefix is requested (with or without trailing slash), redirect to index URL
+            if (httpMethod == "GET" && Regex.IsMatch(path, $"^/{_options.RoutePrefix}/?$"))
             {
-                await _next(httpContext);
+                // Use relative redirect to support proxy environments
+                var relativeRedirectPath = path.EndsWith("/")
+                    ? "index.html"
+                    : $"{path.Split('/').Last()}/index.html";
+
+                RespondWithRedirect(httpContext.Response, relativeRedirectPath);
                 return;
             }
 
-            RespondWithIndexHtml(httpContext.Response);
+            if (httpMethod == "GET" && Regex.IsMatch(path, $"/{_options.RoutePrefix}/?index.html"))
+            {
+                await RespondWithIndexHtml(httpContext.Response);
+                return;
+            }
+
+            await _next(httpContext);
+            return;
         }
 
-        private bool RequestingSwaggerUIIndex(HttpRequest request)
+        private void RespondWithRedirect(HttpResponse response, string redirectPath)
         {
-            var indexPath =  string.IsNullOrEmpty(_options.RoutePrefix) ? "/" : $"/{_options.RoutePrefix}/";
-            return (request.Method == "GET" && request.Path == indexPath);
+            response.StatusCode = 301;
+            response.Headers["Location"] = redirectPath;
         }
 
-        private async void RespondWithIndexHtml(HttpResponse response)
+        private async Task RespondWithIndexHtml(HttpResponse response)
         {
             response.StatusCode = 200;
             response.ContentType = "text/html";
@@ -59,9 +80,18 @@ namespace Swashbuckle.AspNetCore.SwaggerUI
             {
                 { "%(DocumentTitle)", _options.DocumentTitle },
                 { "%(HeadContent)", _options.HeadContent },
-                { "%(ConfigObject)", JsonConvert.SerializeObject(_options.ConfigObject) },
-                { "%(OAuthConfigObject)", JsonConvert.SerializeObject(_options.OAuthConfigObject) }
+                { "%(ConfigObject)", SerializeToJson(_options.ConfigObject) },
+                { "%(OAuthConfigObject)", SerializeToJson(_options.OAuthConfigObject) }
             };
+        }
+
+        private string SerializeToJson(JObject jObject)
+        {
+            return JsonConvert.SerializeObject(jObject, new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Include,
+                Formatting = Formatting.None
+            });
         }
     }
 }

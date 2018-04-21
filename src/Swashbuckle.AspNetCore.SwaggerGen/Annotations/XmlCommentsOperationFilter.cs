@@ -29,8 +29,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             var controllerActionDescriptor = context.ApiDescription.ActionDescriptor as ControllerActionDescriptor;
             if (controllerActionDescriptor == null) return;
 
-            var commentId = XmlCommentsIdHelper.GetCommentIdForMethod(controllerActionDescriptor.MethodInfo);
-            var methodNode = _xmlNavigator.SelectSingleNode(string.Format(MemberXPath, commentId));
+            var memberName = XmlCommentsMemberNameHelper.GetMemberNameForMethod(controllerActionDescriptor.MethodInfo);
+            var methodNode = _xmlNavigator.SelectSingleNode(string.Format(MemberXPath, memberName));
 
             if (methodNode != null)
             {
@@ -103,14 +103,14 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 if (propertyParam == null) continue;
 
                 var metadata = propertyParam.ModelMetadata;
-                var propertyInfo = metadata.ContainerType.GetTypeInfo().GetProperty(metadata.PropertyName);
-                if (propertyInfo == null) continue;
+                var memberInfo = metadata.ContainerType.GetMember(metadata.PropertyName).FirstOrDefault();
+                if (memberInfo == null) continue;
 
-                var commentId = XmlCommentsIdHelper.GetCommentIdForProperty(propertyInfo);
-                var propertyNode = _xmlNavigator.SelectSingleNode(string.Format(MemberXPath, commentId));
-                if (propertyNode == null) continue;
+                var memberName = XmlCommentsMemberNameHelper.GetMemberNameForMember(memberInfo);
+                var memberNode = _xmlNavigator.SelectSingleNode(string.Format(MemberXPath, memberName));
+                if (memberNode == null) continue;
 
-                var summaryNode = propertyNode.SelectSingleNode(SummaryXPath);
+                var summaryNode = memberNode.SelectSingleNode(SummaryXPath);
                 if (summaryNode != null)
                     parameter.Description = XmlCommentsTextHelper.Humanize(summaryNode.InnerXml);
             }

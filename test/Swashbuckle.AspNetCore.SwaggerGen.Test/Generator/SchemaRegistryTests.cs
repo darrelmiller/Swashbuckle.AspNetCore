@@ -22,8 +22,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [InlineData(typeof(float), "number", "float")]
         [InlineData(typeof(double), "number", "double")]
         [InlineData(typeof(decimal), "number", "double")]
-        [InlineData(typeof(byte), "string", "byte")]
-        [InlineData(typeof(sbyte), "string", "byte")]
+        [InlineData(typeof(byte), "integer", "int32")]
+        [InlineData(typeof(sbyte), "integer", "int32")]
         [InlineData(typeof(byte[]), "string", "byte")]
         [InlineData(typeof(bool), "boolean", null)]
         [InlineData(typeof(DateTime), "string", "date-time")]
@@ -45,10 +45,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         public void GetOrRegister_ReturnsEnumSchema_ForEnumTypes()
         {
             var schema = Subject().GetOrRegister(typeof(AnEnum));
+
             Assert.Equal("integer", schema.Type);
             Assert.Equal("int32", schema.Format);
-            Assert.Contains(AnEnum.Value1, schema.Enum);
-            Assert.Contains(AnEnum.Value2, schema.Enum);
+            Assert.Equal(new List<object> { AnEnum.Value1, AnEnum.Value2, AnEnum.X }, schema.Enum);
         }
 
         [Theory]
@@ -86,6 +86,40 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             Assert.Equal("string", schema.Properties["Value1"].Type);
             Assert.Equal("string", schema.Properties["Value2"].Type);
             Assert.Equal("string", schema.Properties["X"].Type);
+        }
+
+        [Theory]
+        [InlineData(typeof(short?), "integer", "int32")]
+        [InlineData(typeof(long?), "integer", "int64")]
+        [InlineData(typeof(float?), "number", "float")]
+        [InlineData(typeof(byte?), "integer", "int32")]
+        [InlineData(typeof(DateTime?), "string", "date-time")]
+        public void GetOrRegister_ReturnsPrimitiveSchema_ForNullableTypes(
+            Type systemType,
+            string expectedType,
+            string expectedFormat)
+        {
+            var schema = Subject().GetOrRegister(systemType);
+
+            Assert.Equal(expectedType, schema.Type);
+            Assert.Equal(expectedFormat, schema.Format);
+        }
+
+        [Theory]
+        [InlineData(typeof(Microsoft.FSharp.Core.FSharpOption<short>), "integer", "int32")]
+        [InlineData(typeof(Microsoft.FSharp.Core.FSharpOption<long>), "integer", "int64")]
+        [InlineData(typeof(Microsoft.FSharp.Core.FSharpOption<float>), "number", "float")]
+        [InlineData(typeof(Microsoft.FSharp.Core.FSharpOption<byte>), "integer", "int32")]
+        [InlineData(typeof(Microsoft.FSharp.Core.FSharpOption<DateTime>), "string", "date-time")]
+        public void GetOrRegister_ReturnsPrimitiveSchema_ForOptionTypes(
+            Type systemType,
+            string expectedType,
+            string expectedFormat)
+        {
+            var schema = Subject().GetOrRegister(systemType);
+
+            Assert.Equal(expectedType, schema.Type);
+            Assert.Equal(expectedFormat, schema.Format);
         }
 
         [Fact]
@@ -204,16 +238,17 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             subject.GetOrRegister(typeof(DataAnnotatedType));
 
             var schema = subject.Definitions["DataAnnotatedType"];
-            Assert.Equal(1, schema.Properties["RangeProperty"].Minimum);
-            Assert.Equal(12, schema.Properties["RangeProperty"].Maximum);
-            Assert.Equal("^[3-6]?\\d{12,15}$", schema.Properties["PatternProperty"].Pattern);
-            Assert.Equal(5, schema.Properties["StringProperty1"].MinLength);
-            Assert.Equal(10, schema.Properties["StringProperty1"].MaxLength);
-            Assert.Equal(1, schema.Properties["StringProperty2"].MinLength);
-            Assert.Equal(3, schema.Properties["StringProperty2"].MaxLength);
-            Assert.Equal("^[3-6]?\\d{12,15}$", schema.Properties["PatternProperty"].Pattern);
-            Assert.Equal(new[] { "RangeProperty", "PatternProperty" }, schema.Required.ToArray());
-            Assert.Equal("DefaultValue", schema.Properties["DefaultValueProperty"].Default);
+            Assert.Equal(1, schema.Properties["IntWithRange"].Minimum);
+            Assert.Equal(12, schema.Properties["IntWithRange"].Maximum);
+            Assert.Equal("^[3-6]?\\d{12,15}$", schema.Properties["StringWithRegularExpression"].Pattern);
+            Assert.Equal(5, schema.Properties["StringWithStringLength"].MinLength);
+            Assert.Equal(10, schema.Properties["StringWithStringLength"].MaxLength);
+            Assert.Equal(1, schema.Properties["StringWithMinMaxLength"].MinLength);
+            Assert.Equal(3, schema.Properties["StringWithMinMaxLength"].MaxLength);
+            Assert.Equal(new[] { "StringWithRequired", "NullableIntWithRequired" }, schema.Required.ToArray());
+            Assert.Equal("date", schema.Properties["StringWithDataTypeDate"].Format);
+            Assert.Equal("date-time", schema.Properties["StringWithDataTypeDateTime"].Format);
+            Assert.Equal("password", schema.Properties["StringWithDataTypePassword"].Format);
         }
 
         [Fact]
@@ -224,12 +259,11 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             subject.GetOrRegister(typeof(MetadataAnnotatedType));
 
             var schema = subject.Definitions["MetadataAnnotatedType"];
-            Assert.Equal(1, schema.Properties["RangeProperty"].Minimum);
-            Assert.Equal(12, schema.Properties["RangeProperty"].Maximum);
-            Assert.Equal("^[3-6]?\\d{12,15}$", schema.Properties["PatternProperty"].Pattern);
-            Assert.Equal(new[] { "RangeProperty", "PatternProperty" }, schema.Required.ToArray());
+            Assert.Equal(1, schema.Properties["IntWithRange"].Minimum);
+            Assert.Equal(12, schema.Properties["IntWithRange"].Maximum);
+            Assert.Equal("^[3-6]?\\d{12,15}$", schema.Properties["StringWithRegularExpression"].Pattern);
+            Assert.Equal(new[] { "StringWithRequired", "NullableIntWithRequired" }, schema.Required.ToArray());
         }
-
 
         [Fact]
         public void GetOrRegister_HonorsStringEnumConverters_ConfiguredViaAttributes()
@@ -237,7 +271,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = Subject().GetOrRegister(typeof(JsonConvertedEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new[] { "Value1", "Value2", "X" }, schema.Enum);
+            Assert.Equal(new List<object> { "Value1", "Value2", "X" }, schema.Enum);
         }
 
         [Fact]
@@ -251,7 +285,21 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = subject.GetOrRegister(typeof(AnEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new[] { "value1", "value2", "x" }, schema.Enum);
+            Assert.Equal(new List<object> { "value1", "value2", "x" }, schema.Enum);
+        }
+
+        [Fact]
+        public void GetOrRegister_HonorsEnumMemberAttributes()
+        {
+            var subject = Subject(new JsonSerializerSettings
+            {
+                Converters = new[] { new StringEnumConverter() }
+            });
+
+            var schema = subject.GetOrRegister(typeof(AnAnnotatedEnum));
+
+            Assert.Equal("string", schema.Type);
+            Assert.Equal(new[] { "foo-bar", "bar-foo", "Default" }, schema.Enum);
         }
 
         [Fact]
@@ -322,7 +370,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = subject.GetOrRegister(typeof(AnEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new[] { "Value1", "Value2", "X" }, schema.Enum);
+            Assert.Equal(new List<object> { "Value1", "Value2", "X" }, schema.Enum);
         }
 
         [Fact]
@@ -337,7 +385,21 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = subject.GetOrRegister(typeof(AnEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new[] { "value1", "value2", "x" }, schema.Enum);
+            Assert.Equal(new List<object> { "value1", "value2", "x" }, schema.Enum);
+        }
+
+        [Fact]
+        public void GetOrRegister_SupportsOptionToUseReferencedDefinitionsForEnums()
+        {
+            var subject = Subject(c =>
+            {
+                c.UseReferencedDefinitionsForEnums = true;
+            });
+
+            var schema = subject.GetOrRegister(typeof(AnEnum));
+
+            Assert.NotNull(schema.Ref);
+            Assert.Contains(schema.Ref.Replace("#/definitions/", string.Empty), subject.Definitions.Keys);
         }
 
         [Fact]

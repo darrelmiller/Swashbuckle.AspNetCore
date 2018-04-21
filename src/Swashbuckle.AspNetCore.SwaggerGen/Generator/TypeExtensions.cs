@@ -7,10 +7,17 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     public static class TypeExtensions
     {
+        internal static string FullNameSansTypeArguments(this Type type)
+        {
+            var fullName = type.FullName;
+            var chopIndex = fullName.IndexOf("[[");
+            return (chopIndex == -1) ? fullName : fullName.Substring(0, chopIndex);
+        }
+
         public static string FriendlyId(this Type type, bool fullyQualified = false)
         {
             var typeName = fullyQualified
-                ? type.FullNameSansTypeParameters().Replace("+", ".")
+                ? type.FullNameSansTypeArguments().Replace("+", ".")
                 : type.Name;
 
             if (type.GetTypeInfo().IsGenericType)
@@ -28,34 +35,19 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return typeName;
         }
 
-        internal static string FullNameSansTypeParameters(this Type type)
-        {
-            var fullName = type.FullName;
-            var chopIndex = fullName.IndexOf("[[");
-            return (chopIndex == -1) ? fullName : fullName.Substring(0, chopIndex);
-        }
-
-        internal static Type GetNonNullableType(this Type type)
-        {
-            if (!type.IsNullableType())
-                return type;
-
-            return type.GetGenericArguments()[0];
-        }
-
-        internal static bool IsNullableType(this Type type)
+        internal static bool IsNullable(this Type type)
         {
             return Nullable.GetUnderlyingType(type) != null;
         }
 
-        internal static bool IsGenericType(this PropertyInfo propInfo)
+        internal static bool IsFSharpOption(this Type type)
         {
-            return IntrospectionExtensions.GetTypeInfo(propInfo.PropertyType).IsGenericType;
+            return type.FullNameSansTypeArguments() == "Microsoft.FSharp.Core.FSharpOption`1";
         }
 
-        internal static bool IsEnumType(this Type type)
+        internal static bool IsAssignableToNull(this Type type)
         {
-            return IntrospectionExtensions.GetTypeInfo(type.GetNonNullableType()).IsEnum;
+            return !type.GetTypeInfo().IsValueType || type.IsNullable();
         }
     }
 }

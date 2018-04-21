@@ -40,7 +40,7 @@ namespace CustomUIConfig
                 c.ShowExtensions();
 
                 // Network
-                c.ValidatorUrl(null);
+                c.EnableValidator();
                 c.SupportedSubmitMethods(SubmitMethod.Get);
 
                 // Other
@@ -48,6 +48,7 @@ namespace CustomUIConfig
                 c.InjectStylesheet("/ext/custom-stylesheet.css");
             });
 
+            app.UseStaticFiles();
             app.UseMvc();
         }
     }

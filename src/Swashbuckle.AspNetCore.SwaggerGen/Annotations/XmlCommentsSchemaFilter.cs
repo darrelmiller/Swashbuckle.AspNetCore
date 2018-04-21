@@ -22,8 +22,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             var jsonObjectContract = context.JsonContract as JsonObjectContract;
             if (jsonObjectContract == null) return;
 
-            var commentId = XmlCommentsIdHelper.GetCommentIdForType(context.SystemType);
-            var typeNode = _xmlNavigator.SelectSingleNode(string.Format(MemberXPath, commentId));
+            var memberName = XmlCommentsMemberNameHelper.GetMemberNameForType(context.SystemType);
+            var typeNode = _xmlNavigator.SelectSingleNode(string.Format(MemberXPath, memberName));
 
             if (typeNode != null)
             {
@@ -38,21 +38,21 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 var jsonProperty = jsonObjectContract.Properties[entry.Key];
                 if (jsonProperty == null) continue;
 
-                var propertyInfo = jsonProperty.PropertyInfo();
-                if (propertyInfo != null)
+                var memberInfo = jsonProperty.MemberInfo();
+                if (memberInfo != null)
                 {
-                    ApplyPropertyComments(entry.Value, propertyInfo);
+                    ApplyPropertyComments(entry.Value, memberInfo);
                 }
             }
         }
 
-        private void ApplyPropertyComments(Schema propertySchema, PropertyInfo propertyInfo)
+        private void ApplyPropertyComments(Schema propertySchema, MemberInfo memberInfo)
         {
-            var commentId = XmlCommentsIdHelper.GetCommentIdForProperty(propertyInfo);
-            var propertyNode = _xmlNavigator.SelectSingleNode(string.Format(MemberXPath, commentId));
-            if (propertyNode == null) return;
+            var memberName = XmlCommentsMemberNameHelper.GetMemberNameForMember(memberInfo);
+            var memberNode = _xmlNavigator.SelectSingleNode(string.Format(MemberXPath, memberName));
+            if (memberNode == null) return;
 
-            var summaryNode = propertyNode.SelectSingleNode(SummaryTag);
+            var summaryNode = memberNode.SelectSingleNode(SummaryTag);
             if (summaryNode != null)
             {
                 propertySchema.Description = XmlCommentsTextHelper.Humanize(summaryNode.InnerXml);

@@ -1,10 +1,12 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <Import Project="..\..\version.props"/>
+
   <PropertyGroup>
     <Description>Swagger tools for documenting APIs built on ASP.NET Core</Description>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Swashbuckle.AspNetCore</AssemblyName>
     <PackageId>Swashbuckle.AspNetCore</PackageId>
-    <VersionPrefix>2.0.0</VersionPrefix>
     <PackageTags>swagger;documentation;discovery;help;webapi;aspnet;aspnetcore</PackageTags>
     <PackageProjectUrl>https://github.com/domaindrivendev/Swashbuckle.AspNetCore</PackageProjectUrl>
     <PackageLicenseUrl>https://raw.githubusercontent.com/domaindrivendev/Swashbuckle.AspNetCore/master/LICENSE</PackageLicenseUrl>

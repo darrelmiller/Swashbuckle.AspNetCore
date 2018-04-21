@@ -46,6 +46,9 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 .GroupBy(apiDesc => apiDesc.RelativePathSansQueryString())
                 .ToDictionary(group => "/" + group.Key, group => CreatePathItem(group, schemaRegistry));
 
+            var securityDefinitions = _settings.SecurityDefinitions;
+            var securityRequirements = _settings.SecurityRequirements;
+
             var swaggerDoc = new SwaggerDocument
             {
                 Info = info,
@@ -54,11 +57,13 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 Schemes = schemes,
                 Paths = paths,
                 Definitions = schemaRegistry.Definitions,
-                SecurityDefinitions = _settings.SecurityDefinitions
+                SecurityDefinitions = securityDefinitions.Any() ? securityDefinitions : null,
+                Security = securityRequirements.Any() ? securityRequirements : null
             };
 
             var filterContext = new DocumentFilterContext(
                 _apiDescriptionsProvider.ApiDescriptionGroups,
+                apiDescriptions,
                 schemaRegistry);
 
             foreach (var filter in _settings.DocumentFilters)
@@ -87,15 +92,15 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                         "Actions require an explicit HttpMethod binding for Swagger 2.0",
                         group.First().ActionDescriptor.DisplayName));
 
-                if (group.Count() > 1)
+                if (group.Count() > 1 && _settings.ConflictingActionsResolver == null)
                     throw new NotSupportedException(string.Format(
                         "HTTP method \"{0}\" & path \"{1}\" overloaded by actions - {2}. " +
-                        "Actions require unique method/path combination for Swagger 2.0",
+                        "Actions require unique method/path combination for Swagger 2.0. Use ConflictingActionsResolver as a workaround",
                         httpMethod,
                         group.First().RelativePathSansQueryString(),
                         string.Join(",", group.Select(apiDesc => apiDesc.ActionDescriptor.DisplayName))));
 
-                var apiDescription = group.Single();
+                var apiDescription = (group.Count() > 1) ? _settings.ConflictingActionsResolver(group) : group.Single();
 
                 switch (httpMethod)
                 {
@@ -129,7 +134,12 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         private Operation CreateOperation(ApiDescription apiDescription, ISchemaRegistry schemaRegistry)
         {
             var parameters = apiDescription.ParameterDescriptions
-                .Where(paramDesc => paramDesc.Source.IsFromRequest && !paramDesc.IsPartOfCancellationToken())
+                .Where(paramDesc =>
+                    {
+                        return paramDesc.Source.IsFromRequest
+                            && (paramDesc.ModelMetadata == null || paramDesc.ModelMetadata.IsBindingAllowed)
+                            && !paramDesc.IsPartOfCancellationToken();
+                    })
                 .Select(paramDesc => CreateParameter(apiDescription, paramDesc, schemaRegistry))
                 .ToList();
 
@@ -167,12 +177,6 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         {
             var location = GetParameterLocation(apiDescription, paramDescription);
 
-            if (location == "path" && !paramDescription.IsRequired())
-                throw new NotSupportedException(string.Format(
-                    "Route contains optional parameters for action - {0}. " +
-                    "Optional route parameters are not allowed in Swagger 2.0",
-                    apiDescription.ActionDescriptor.DisplayName));
-
             var name = _settings.DescribeAllParametersInCamelCase
                 ? paramDescription.Name.ToCamelCase()
                 : paramDescription.Name;
@@ -192,13 +196,23 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             {
                 Name = name,
                 In = location,
-                Required = paramDescription.IsRequired()
+                Required = (location == "path") || paramDescription.IsRequired()
             };
 
             if (schema == null)
+            {
                 nonBodyParam.Type = "string";
+            }
             else
+            {
+                // In some cases (e.g. enum types), the schemaRegistry may return a reference instead of a
+                // full schema. Retrieve the full schema before populating the parameter description
+                var fullSchema = (schema.Ref != null)
+                    ? schemaRegistry.Definitions[schema.Ref.Replace("#/definitions/", string.Empty)]
+                    : schema;
+
                 nonBodyParam.PopulateFrom(schema);
+            }
 
             if (nonBodyParam.Type == "array")
                 nonBodyParam.CollectionFormat = "multi";

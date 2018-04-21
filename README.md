@@ -11,12 +11,12 @@ And that's not all ...
 
 Once you have an API that can describe itself in Swagger, you've opened the treasure chest of Swagger-based tools including a client generator that can be targeted to a wide range of popular platforms. See [swagger-codegen](https://github.com/swagger-api/swagger-codegen) for more details.
 
-# Compatability #
+# Compatibility #
 
 |Swashbuckle Version|ASP.NET Core|Swagger (OpenAPI) Spec.|swagger-ui|
 |----------|----------|----------|----------|
-|[master](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/tree/master)|>=1.0.4|2.0|3.10.0|
-|[2.0.0](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/tree/v2.0.0)|>=1.0.4|2.0|3.10.0|
+|[master](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/tree/master)|>=1.0.4|2.0|3.13.2|
+|[2.4.0](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/tree/v2.0.0)|>=1.0.4|2.0|3.12.2|
 |[1.2.0](https://github.com/domaindrivendev/Swashbuckle.AspNetCore/tree/v1.2.0)|>=1.0.4|2.0|2.2.10|
 
 # Getting Started #
@@ -126,6 +126,7 @@ The steps described above will get you up and running with minimal setup. Howeve
 * [Swashbuckle.AspNetCore.SwaggerGen](#swashbuckleaspnetcoreswaggergen)
  
     * [List Operations Responses](#list-operation-responses)
+    * [Flag Required Parameters and Schema Properties](#flag-required-parameters-and-schema-properties)
     * [Include Descriptions from XML Comments](#include-descriptions-from-xml-comments)
     * [Provide Global API Metadata](#provide-global-api-metadata)
     * [Generate Multiple Swagger Documents](#generate-multiple-swagger-documents)
@@ -230,7 +231,7 @@ If you need to specify a different status code and/or additional responses, or y
 [HttpPost("{id}")]
 [ProducesResponseType(typeof(Product), 200)]
 [ProducesResponseType(typeof(IDictionary<string, string>), 400)]
-[ProducesResponseType(typeof(void), 500)]
+[ProducesResponseType(500)]
 public IActionResult GetById(int id)
 ```
 
@@ -259,9 +260,72 @@ responses: {
 }
 ```
 
+### Flag Required Parameters and Schema Properties ###
+
+In a Swagger document, you can flag parameters and schema properties that are required for a request. As is generally the case with Swashbuckle, this metadata will be inferred automatically so long as you're using ASP.NET Core [Model Binding](https://docs.microsoft.com/en-us/aspnet/core/mvc/models/model-binding#customize-model-binding-behavior-with-attributes) or [Data Validation](https://docs.microsoft.com/en-us/aspnet/core/tutorials/first-mvc-app/validation) attributes to implement request validation.
+
+#### Model Binding Attributes ####
+
+In ASP.NET Core, you can use the `BindRequired` attribute on non-body (query, header etc.) parameters to ensure they're present in the request:
+
+```csharp
+// ProductsController.cs
+public IActionResult Search([FromQuery]SearchParams searchParams)
+{
+    if (!ModelState.IsValid)
+        return BadRequest(ModelState);
+    ...
+}
+
+// SearchParams.cs
+public class SearchParams
+{
+    [BindRequired]
+    public string Keywords { get; set; }
+
+    public int PageNo { get; set; } = 1;
+
+    public int PageSize { get; set; } = 20;
+}
+```
+
+With this implementation, Swashbuckle will automatically describe `Keywords` as a required parameter. 
+
+__NOTE__: At the time of writing, ASP.NET Core does not support the use of `BindRequired` on action parameters directly. This feature is due to be added in version 2.1. Until then, you'll need to encapsulate your non-body parameters in a model class, as shown above.
+
+#### Data Annotations ####
+
+ASP.NET Core's built-in validation also honors the `Required` attribute from the DataAnnotations library:
+
+```csharp
+// ProductsController.cs
+public IActionResult Create([FromBody]Product product)
+{
+    if (!ModelState.IsValid)
+        return BadRequest(ModelState);
+    ...
+}
+
+// Product.cs
+public class Product
+{
+    [Required]
+    public int? Id { get; set; }
+
+    [Required]
+    public string Name { get; set; }
+
+    public string Description { get; set; }
+}
+```
+
+Again, Swashbuckle will automatically detect this metadata and list `Id` and `Name` as required fields in the generated JSON Schema.
+
+__NOTE__: When using ASP.NET Core validation, the `Required` attribute will have no effect on properties that default to a non-null value. This means value types should always be converted to `Nullable<T>` for validation to work, and therefore for Swashbuckle to flag the parameter or schema property as being required.
+
 ### Include Descriptions from XML Comments ###
 
-To enhance the generated docs with human-friendly descriptions, you can annotate controllers and models with [Xml Comments](http://msdn.microsoft.com/en-us/library/b2s063f7(v=vs.110).aspx) and configure Swashbuckle to incorporate those comments into the outputted Swagger JSON:
+To enhance the generated docs with human-friendly descriptions, you can annotate controller actions and models with [Xml Comments](http://msdn.microsoft.com/en-us/library/b2s063f7(v=vs.110).aspx) and configure Swashbuckle to incorporate those comments into the outputted Swagger JSON:
 
 1. Open the Properties dialog for your project, click the "Build" tab and ensure that "XML documentation file" is checked. This will produce a file containing all XML comments at build-time.
 
@@ -298,7 +362,7 @@ To enhance the generated docs with human-friendly descriptions, you can annotate
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(Product), 200)]
     [ProducesResponseType(typeof(IDictionary<string, string>), 400)]
-    [ProducesResponseType(typeof(void), 500)]
+    [ProducesResponseType(500)]
     public Product GetById(int id)
     ```
 
@@ -490,7 +554,7 @@ By default, actions are ordered by assigned tag (see above) before they're group
 services.AddSwaggerGen(c =>
 {
     ...
-    c.OrderActionsBy((apiDesc) => $"{apiDesc.ControllerName()}_{apiDesc.HttpMethod}");
+    c.OrderActionsBy((apiDesc) => $"{apiDesc.ActionDescriptor.RouteValues["controller"]}_{apiDesc.HttpMethod}");
 };
 ```
 
@@ -631,6 +695,20 @@ services.AddSwaggerGen(c =>
 };
 ```
 
+You can also use the `SwaggerSchemaFilter` attribute to apply an `ISchemaFilter` schema to your model.
+
+```
+[SwaggerSchemaFilter(typeof(PhoneNumberSchemaFilter))]
+public class PhoneNumber
+{
+    public string CountryCode { get; set; }
+
+    public string AreaCode { get; set; }
+
+    public string SubscriberId { get; set; }
+}
+```
+
 #### Document Filters ####
 
 Once a _Swagger Document_ has been generated, it too can be passed through a set of pre-configured _Document_ Filters. This gives full control to modify the document however you see fit. To ensure you're still returning valid Swagger JSON, you should have a read through the [specification](http://swagger.io/specification/) before using this filter type.
@@ -654,15 +732,16 @@ _NOTE: If you're using the SwaggerUI middleware, this filter can be used to disp
 
 ### Add Security Definitions and Requirements ###
 
-In Swagger, you can describe how your API is secured by defining one or more _Security Scheme's_ (e.g basic, api key, oauth etc.) and declaring which of those schemes are applicable globally OR for specific operations. For more details, take a look at the "securityDefinitions" and "security" fields in the [Swagger spec](http://swagger.io/specification/#swaggerObject).
+In Swagger, you can describe how your API is secured by defining one or more security schemes (e.g basic, api key, oauth2 etc.) and declaring which of those schemes are applicable globally OR for specific operations. For more details, take a look at the "securityDefinitions" and "security" fields in the [Swagger spec](http://swagger.io/specification/#swaggerObject).
 
-You can use some of the options described above to include security metadata in the generated _Swagger Document_. The example below adds an [OAuth 2.0](https://oauth.net/2/) definition to the global metadata and a corresponding _Operation Filter_ that uses the presence of an _AuthorizeAttribute_ to determine which operations the scheme applies to.
+In Swashbuckle, you can define schemes by invoking the `AddSecurityDefinition` method, providing a name and an instance of BasicAuthScheme, ApiKeyScheme or OAuth2Scheme. For example you can define an [OAuth 2.0 - implicit flow](https://oauth.net/2/) as follows:
 
 ```csharp
 // Startup.cs
 services.AddSwaggerGen(c =>
 {
     ...
+
     // Define the OAuth2.0 scheme that's in use (i.e. Implicit Flow)
     c.AddSecurityDefinition("oauth2", new OAuth2Scheme
     {
@@ -675,52 +754,58 @@ services.AddSwaggerGen(c =>
             { "writeAccess", "Access write operations" }
         }
     });
-    // Assign scope requirements to operations based on AuthorizeAttribute
-    c.OperationFilter<SecurityRequirementsOperationFilter>();
 };
+```
 
+__NOTE__: In addition to defining a scheme, you also need to indicate which operations that scheme is applicable to. You can apply schemes globally (i.e. to ALL operations) through the `AddSecurityRequirement` method. The example below indicates that the scheme called "oauth2" should be applied to all operations, and that the "readAccess" and "writeAccess" scopes are required. When applying schemes of type other than "oauth2", the array of scopes MUST be empty.
+
+```csharp
+c.AddSwaggerGen(c =>
+{
+	...
+
+    c.AddSecurityRequirement(new Dictionary<string, IEnumerable<string>>
+    {
+        { "oauth2", new[] { "readAccess", "writeAccess" } }
+    });
+})
+```
+
+If you have schemes that only apply to specific operations, you can apply them through an `OperationFilter`. For example, the following filter adds OAuth2 requirements based on the presence of the `AuthorizeAttribute`:
+
+```csharp
 // SecurityRequirementsOperationFilter.cs
 public class SecurityRequirementsOperationFilter : IOperationFilter
 {
-    private readonly IOptions<AuthorizationOptions> authorizationOptions;
-
-    public SecurityRequirementsOperationFilter(IOptions<AuthorizationOptions> authorizationOptions)
-    {
-        this.authorizationOptions = authorizationOptions;
-    }
-
     public void Apply(Operation operation, OperationFilterContext context)
     {
-        var controllerPolicies = context.ApiDescription.ControllerAttributes()
+        // Policy names map to scopes
+        var controllerScopes = context.ApiDescription.ControllerAttributes()
             .OfType<AuthorizeAttribute>()
             .Select(attr => attr.Policy);
-        var actionPolicies = context.ApiDescription.ActionAttributes()
-            .OfType<AuthorizeAttribute>()
-            .Select(attr => attr.Policy);
-        var policies = controllerPolicies.Union(actionPolicies).Distinct();
-        var requiredClaimTypes = policies
-            .Select(x => this.authorizationOptions.Value.GetPolicy(x))
-            .SelectMany(x => x.Requirements)
-            .OfType<ClaimsAuthorizationRequirement>()
-            .Select(x => x.ClaimType);
 
-        if (requiredClaimTypes.Any())
+        var actionScopes = context.ApiDescription.ActionAttributes()
+            .OfType<AuthorizeAttribute>()
+            .Select(attr => attr.Policy);
+
+        var requiredScopes = controllerScopes.Union(actionScopes).Distinct();
+
+        if (requiredScopes.Any())
         {
             operation.Responses.Add("401", new Response { Description = "Unauthorized" });
             operation.Responses.Add("403", new Response { Description = "Forbidden" });
 
             operation.Security = new List<IDictionary<string, IEnumerable<string>>>();
-            operation.Security.Add(
-                new Dictionary<string, IEnumerable<string>>
-                {
-                    { "oauth2", requiredClaimTypes }
-                });
+            operation.Security.Add(new Dictionary<string, IEnumerable<string>>
+            {
+                { "oauth2", requiredScopes }
+            });
         }
     }
 }
 ```
 
-_NOTE: If you're using the SwaggerUI middleware, you can enable interactive OAuth2.0 flows that are powered by the emitted security metadata. See [Enabling OAuth2.0 Flows](#enable-oauth20-flows) for more details._
+__NOTE__: If you're using the SwaggerUI middleware, you can enable interactive OAuth2.0 flows that are powered by the emitted security metadata. See [Enabling OAuth2.0 Flows](#enable-oauth20-flows) for more details.
 
 ## Swashbuckle.AspNetCore.SwaggerUI ##
 
@@ -777,12 +862,14 @@ app.UseSwaggerUI(c =>
     c.EnableFilter();
     c.MaxDisplayedTags(5);
     c.ShowExtensions();
-    c.ValidatorUrl(null);
+    c.EnableValidator();
     c.SupportedSubmitMethods(SubmitMethod.Get, SubmitMethod.Head);
 });
 ```
 
 __NOTE:__ The `InjectOnCompleteJavaScript` and `InjectOnFailureJavaScript` options have been removed because the latest version of swagger-ui doesn't expose the neccessary hooks. Instead, it provides a [flexible customization system](https://github.com/swagger-api/swagger-ui/blob/master/docs/customization/overview.md) based on concepts and patterns from React and Redux. To leverage this, you'll need to provide a custom version of index.html as described [below](#customize-indexhtml). 
+
+The [custom index sample app](test/WebSites/CustomUIIndex/Swagger/index.html) demonstrates this approach, using the swagger-ui plugin system provide a custom topbar, and to hide the info component.
 
 ### Inject Custom CSS ###
 
@@ -843,7 +930,7 @@ The tool can be installed as a [per-project, framework-dependent CLI extension](
 
 ```xml
 <ItemGroup>
-  <DotNetCliToolReference Include="Swashbuckle.AspNetCore.Cli" Version="2.0.0-beta1" />
+  <DotNetCliToolReference Include="Swashbuckle.AspNetCore.Cli" Version="2.1.0-beta1" />
 </ItemGroup>
 ```
 
