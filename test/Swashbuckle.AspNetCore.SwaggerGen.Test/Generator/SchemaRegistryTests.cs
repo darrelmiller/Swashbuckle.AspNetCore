@@ -7,6 +7,8 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Converters;
 using Xunit;
 using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Any;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 {
@@ -127,7 +129,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         {
             var reference = Subject().GetOrRegister(typeof(ComplexType));
 
-            Assert.Equal("#/definitions/ComplexType", reference.Ref);
+            Assert.Equal("#/definitions/ComplexType", reference.Reference.ReferenceV2);
         }
 
         [Theory]
@@ -299,14 +301,14 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = subject.GetOrRegister(typeof(AnAnnotatedEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new[] { "foo-bar", "bar-foo", "Default" }, schema.Enum);
+            Assert.Equal(new[] { "foo-bar", "bar-foo", "Default" }, schema.Enum.Select(x=> ((OpenApiString)x).Value).ToArray());
         }
 
         [Fact]
         public void GetOrRegister_SupportsOptionToExplicitlyMapTypes()
         {
             var subject = Subject(c =>
-                c.CustomTypeMappings.Add(typeof(ComplexType), () => new Schema { Type = "string" })
+                c.CustomTypeMappings.Add(typeof(ComplexType), () => new OpenApiSchema { Type = "string" })
             );
 
             var schema = subject.GetOrRegister(typeof(ComplexType));
@@ -329,9 +331,9 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var schemaOrRef = subject.GetOrRegister(systemType);
 
-            var schema = (schemaOrRef.Ref == null)
+            var schema = (schemaOrRef.Reference == null)
                 ? schemaOrRef
-                : subject.Definitions[schemaOrRef.Ref.Replace("#/definitions/", "")];
+                : subject.Definitions[schemaOrRef.Reference.ReferenceV2.Replace("#/definitions/", "")];
 
             Assert.True(schema.Extensions.ContainsKey("X-property1"));
         }
@@ -358,8 +360,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var jsonReference1 = subject.GetOrRegister(typeof(Namespace1.ConflictingType));
             var jsonReference2 = subject.GetOrRegister(typeof(Namespace2.ConflictingType));
 
-            Assert.Equal("#/definitions/Namespace1.ConflictingType", jsonReference1.Ref);
-            Assert.Equal("#/definitions/Namespace2.ConflictingType", jsonReference2.Ref);
+            Assert.Equal("#/definitions/Namespace1.ConflictingType", jsonReference1.Reference.ReferenceV2);
+            Assert.Equal("#/definitions/Namespace2.ConflictingType", jsonReference2.Reference.ReferenceV2);
         }
 
         [Fact]
@@ -398,8 +400,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var schema = subject.GetOrRegister(typeof(AnEnum));
 
-            Assert.NotNull(schema.Ref);
-            Assert.Contains(schema.Ref.Replace("#/definitions/", string.Empty), subject.Definitions.Keys);
+            Assert.NotNull(schema.Reference);
+            Assert.Contains(schema.Reference.ReferenceV2.Replace("#/definitions/", string.Empty), subject.Definitions.Keys);
         }
 
         [Fact]
@@ -423,9 +425,9 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var rootSchema = subject.Definitions["CompositeType"];
             Assert.NotNull(rootSchema);
             Assert.Equal("object", rootSchema.Type);
-            Assert.Equal("#/definitions/ComplexType", rootSchema.Properties["Property1"].Ref);
+            Assert.Equal("#/definitions/ComplexType", rootSchema.Properties["Property1"].Reference.ReferenceV2);
             Assert.Equal("array", rootSchema.Properties["Property2"].Type);
-            Assert.Equal("#/definitions/ComplexType", rootSchema.Properties["Property2"].Items.Ref);
+            Assert.Equal("#/definitions/ComplexType", rootSchema.Properties["Property2"].Items.Reference.ReferenceV2);
             var componentSchema = subject.Definitions["ComplexType"];
             Assert.NotNull(componentSchema);
             Assert.Equal("object", componentSchema.Type);
@@ -442,7 +444,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var rootSchema = subject.Definitions["ContainingType"];
             Assert.NotNull(rootSchema);
             Assert.Equal("object", rootSchema.Type);
-            Assert.Equal("#/definitions/NestedType", rootSchema.Properties["Property1"].Ref);
+            Assert.Equal("#/definitions/NestedType", rootSchema.Properties["Property1"].Reference.ReferenceV2);
             var nestedSchema = subject.Definitions["NestedType"];
             Assert.NotNull(nestedSchema);
             Assert.Equal("object", nestedSchema.Type);

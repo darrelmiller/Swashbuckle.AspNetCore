@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.OpenApi.Models;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 
@@ -6,7 +7,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     public interface ISchemaFilter
     {
-        void Apply(Schema model, SchemaFilterContext context);
+        void Apply(OpenApiSchema model, SchemaFilterContext context);
     }
 
     public class SchemaFilterContext

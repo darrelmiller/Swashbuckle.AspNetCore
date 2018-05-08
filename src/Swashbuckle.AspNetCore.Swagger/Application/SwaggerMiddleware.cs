@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Routing.Template;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
+using Microsoft.OpenApi.Models;
 
 namespace Swashbuckle.AspNetCore.Swagger
 {
@@ -67,7 +68,7 @@ namespace Swashbuckle.AspNetCore.Swagger
             return true;
         }
 
-        private async Task RespondWithSwaggerJson(HttpResponse response, SwaggerDocument swagger)
+        private async Task RespondWithSwaggerJson(HttpResponse response, OpenApiDocument swagger)
         {
             response.StatusCode = 200;
             response.ContentType = "application/json";

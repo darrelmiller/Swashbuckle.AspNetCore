@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
@@ -9,7 +10,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
     {
         public SwaggerGeneratorSettings()
         {
-            SwaggerDocs = new Dictionary<string, Info>();
+            SwaggerDocs = new Dictionary<string, OpenApiInfo>();
             DocInclusionPredicate = (docName, api) => api.GroupName == null || api.GroupName == docName;
             TagSelector = (apiDesc) => apiDesc.ControllerName();
             SortKeySelector = (apiDesc) => TagSelector(apiDesc);
@@ -19,7 +20,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             DocumentFilters = new List<IDocumentFilter>();
         }
 
-        public IDictionary<string, Info> SwaggerDocs { get; set; }
+        public IDictionary<string, OpenApiInfo> SwaggerDocs { get; set; }
 
         public Func<string, ApiDescription, bool> DocInclusionPredicate { get; set; }
 

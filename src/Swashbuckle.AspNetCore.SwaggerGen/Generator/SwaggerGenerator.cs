@@ -4,7 +4,9 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.Swagger.Model;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
@@ -24,7 +26,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             _settings = settings ?? new SwaggerGeneratorSettings();
         }
 
-        public SwaggerDocument GetSwagger(
+        public OpenApiDocument GetSwagger(
             string documentName,
             string host = null,
             string basePath = null,
@@ -32,7 +34,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         {
             var schemaRegistry = _schemaRegistryFactory.Create();
 
-            Info info;
+            OpenApiInfo info;
             if (!_settings.SwaggerDocs.TryGetValue(documentName, out info))
                 throw new UnknownSwaggerDocument(documentName);
 
@@ -49,16 +51,13 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             var securityDefinitions = _settings.SecurityDefinitions;
             var securityRequirements = _settings.SecurityRequirements;
 
-            var swaggerDoc = new SwaggerDocument
+            var swaggerDoc = new OpenApiDocument
             {
                 Info = info,
-                Host = host,
-                BasePath = basePath,
-                Schemes = schemes,
-                Paths = paths,
-                Definitions = schemaRegistry.Definitions,
-                SecurityDefinitions = securityDefinitions.Any() ? securityDefinitions : null,
-                Security = securityRequirements.Any() ? securityRequirements : null
+                Servers = OpenApiDocumentConversionHelpers.CreateServers(schemes, host, basePath),
+                Paths = OpenApiDocumentConversionHelpers.CreatePaths(paths),
+                Components = OpenApiDocumentConversionHelpers.CreateComponents(schemaRegistry.Definitions, securityDefinitions.Any() ? securityDefinitions : null),
+                SecurityRequirements = OpenApiDocumentConversionHelpers.CreateSecurityRequirements(securityRequirements.Any() ? securityRequirements : null)
             };
 
             var filterContext = new DocumentFilterContext(
@@ -74,9 +73,9 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return swaggerDoc;
         }
 
-        private PathItem CreatePathItem(IEnumerable<ApiDescription> apiDescriptions, ISchemaRegistry schemaRegistry)
+        private OpenApiPathItem CreatePathItem(IEnumerable<ApiDescription> apiDescriptions, ISchemaRegistry schemaRegistry)
         {
-            var pathItem = new PathItem();
+            var pathItem = new OpenApiPathItem();
 
             // Group further by http method
             var perMethodGrouping = apiDescriptions
@@ -105,25 +104,25 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 switch (httpMethod)
                 {
                     case "GET":
-                        pathItem.Get = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Operations[OperationType.Get] = CreateOperation(apiDescription, schemaRegistry);
                         break;
                     case "PUT":
-                        pathItem.Put = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Operations[OperationType.Put] = CreateOperation(apiDescription, schemaRegistry);
                         break;
                     case "POST":
-                        pathItem.Post = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Operations[OperationType.Post] = CreateOperation(apiDescription, schemaRegistry);
                         break;
                     case "DELETE":
-                        pathItem.Delete = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Operations[OperationType.Delete] = CreateOperation(apiDescription, schemaRegistry);
                         break;
                     case "OPTIONS":
-                        pathItem.Options = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Operations[OperationType.Options] = CreateOperation(apiDescription, schemaRegistry);
                         break;
                     case "HEAD":
-                        pathItem.Head = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Operations[OperationType.Head] = CreateOperation(apiDescription, schemaRegistry);
                         break;
                     case "PATCH":
-                        pathItem.Patch = CreateOperation(apiDescription, schemaRegistry);
+                        pathItem.Operations[OperationType.Patch] = CreateOperation(apiDescription, schemaRegistry);
                         break;
                 }
             }
@@ -131,7 +130,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return pathItem;
         }
 
-        private Operation CreateOperation(ApiDescription apiDescription, ISchemaRegistry schemaRegistry)
+        private OpenApiOperation CreateOperation(ApiDescription apiDescription, ISchemaRegistry schemaRegistry)
         {
             var parameters = apiDescription.ParameterDescriptions
                 .Where(paramDesc =>
@@ -150,15 +149,14 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                     apiResponseType => CreateResponse(apiResponseType, schemaRegistry)
                  );
 
-            var operation = new Operation
+            var operation = new OpenApiOperation
             {
-                Tags = new[] { _settings.TagSelector(apiDescription) },
+                Tags = OpenApiDocumentConversionHelpers.CreateTags( new[] { _settings.TagSelector(apiDescription) }),
                 OperationId = apiDescription.FriendlyId(),
-                Consumes = apiDescription.SupportedRequestMediaTypes().ToList(),
-                Produces = apiDescription.SupportedResponseMediaTypes().ToList(),
                 Parameters = parameters.Any() ? parameters : null, // parameters can be null but not empty
-                Responses = responses,
-                Deprecated = apiDescription.IsObsolete() ? true : (bool?)null
+                RequestBody = OpenApiDocumentConversionHelpers.CreateRequestBody(apiDescription.SupportedRequestMediaTypes().ToList()),
+                Responses = OpenApiDocumentConversionHelpers.CreateResponses(apiDescription.SupportedResponseMediaTypes().ToList()),
+                Deprecated = apiDescription.IsObsolete() ? true : false
             };
 
             var filterContext = new OperationFilterContext(apiDescription, schemaRegistry);
@@ -170,7 +168,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return operation;
         }
 
-        private IParameter CreateParameter(
+        private OpenApiParameter CreateParameter(
             ApiDescription apiDescription,
             ApiParameterDescription paramDescription,
             ISchemaRegistry schemaRegistry)
@@ -183,39 +181,30 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
             var schema = (paramDescription.Type == null) ? null : schemaRegistry.GetOrRegister(paramDescription.Type);
 
-            if (location == "body")
-            {
-                return new BodyParameter
-                {
-                    Name = name,
-                    Schema = schema
-                };
-            }
-
-            var nonBodyParam = new NonBodyParameter
+            var nonBodyParam = new OpenApiParameter
             {
                 Name = name,
-                In = location,
+                In = OpenApiDocumentConversionHelpers.CreateIn(location),
                 Required = (location == "path") || paramDescription.IsRequired()
             };
 
             if (schema == null)
             {
-                nonBodyParam.Type = "string";
+                nonBodyParam.Schema = new OpenApiSchema() { Type = "string" };
             }
             else
             {
                 // In some cases (e.g. enum types), the schemaRegistry may return a reference instead of a
                 // full schema. Retrieve the full schema before populating the parameter description
-                var fullSchema = (schema.Ref != null)
-                    ? schemaRegistry.Definitions[schema.Ref.Replace("#/definitions/", string.Empty)]
+                var fullSchema = (schema.Reference != null)
+                    ? schemaRegistry.Definitions[schema.Reference.ReferenceV2]
                     : schema;
 
-                nonBodyParam.PopulateFrom(schema);
+                OpenApiDocumentConversionHelpers.UpdateParameter(nonBodyParam,schema);
             }
 
-            if (nonBodyParam.Type == "array")
-                nonBodyParam.CollectionFormat = "multi";
+            if (nonBodyParam.Schema.Type == "array")
+                nonBodyParam.Style = ParameterStyle.DeepObject;
 
             return nonBodyParam;
         }
@@ -239,18 +228,18 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return "query";
         }
 
-        private Response CreateResponse(ApiResponseType apiResponseType, ISchemaRegistry schemaRegistry)
+        private OpenApiResponse CreateResponse(ApiResponseType apiResponseType, ISchemaRegistry schemaRegistry)
         {
             var description = ResponseDescriptionMap
                 .FirstOrDefault((entry) => Regex.IsMatch(apiResponseType.StatusCode.ToString(), entry.Key))
                 .Value;
 
-            return new Response
+            return new OpenApiResponse
             {
                 Description = description,
-                Schema = (apiResponseType.Type != null && apiResponseType.Type != typeof(void))
+                Content = OpenApiDocumentConversionHelpers.CreateContent((apiResponseType.Type != null && apiResponseType.Type != typeof(void))
                     ? schemaRegistry.GetOrRegister(apiResponseType.Type)
-                    : null
+                    : null)
             };
         }
 

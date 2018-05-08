@@ -6,6 +6,7 @@ using Swashbuckle.AspNetCore.Swagger;
 using System;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.AspNetCore.Mvc.Controllers;
+using Microsoft.OpenApi.Models;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 {
@@ -14,7 +15,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [Fact]
         public void Apply_SetsTagDescription_FromControllerSummaryTags()
         {
-            var document = new SwaggerDocument();
+            var document = new OpenApiDocument();
             var filterContext = new DocumentFilterContext(
                 null,
                 new[]

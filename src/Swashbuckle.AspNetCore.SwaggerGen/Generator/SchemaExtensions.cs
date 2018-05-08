@@ -5,12 +5,14 @@ using System.Reflection;
 using Newtonsoft.Json.Serialization;
 using Swashbuckle.AspNetCore.Swagger;
 using System.Collections.Generic;
+using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Any;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     internal static class SchemaExtensions
     {
-        internal static Schema AssignValidationProperties(this Schema schema, JsonProperty jsonProperty)
+        internal static OpenApiSchema AssignValidationProperties(this OpenApiSchema schema, JsonProperty jsonProperty)
         {
             var propInfo = jsonProperty.MemberInfo();
             if (propInfo == null)
@@ -20,7 +22,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             {
                 var defaultValue = attribute as DefaultValueAttribute;
                 if (defaultValue != null)
-                    schema.Default = defaultValue.Value;
+                    schema.Default = new OpenApiString((string)defaultValue.Value);  //TOFIX
 
                 var regex = attribute as RegularExpressionAttribute;
                 if (regex != null)
@@ -67,7 +69,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return schema;
         }
 
-        internal static void PopulateFrom(this PartialSchema partialSchema, Schema schema)
+        internal static void PopulateFrom(this OpenApiSchema partialSchema, OpenApiSchema schema)
         {
             if (schema == null) return;
 
@@ -77,7 +79,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             if (schema.Items != null)
             {
                 // TODO: Handle jagged primitive array and error on jagged object array
-                partialSchema.Items = new PartialSchema();
+                partialSchema.Items = new OpenApiSchema();
                 partialSchema.Items.PopulateFrom(schema.Items);
             }
 

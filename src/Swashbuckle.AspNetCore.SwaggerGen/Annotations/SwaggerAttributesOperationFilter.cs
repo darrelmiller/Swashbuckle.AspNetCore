@@ -1,18 +1,20 @@
 ﻿using System;
 using System.Linq;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.Swagger.Model;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     public class SwaggerAttributesOperationFilter : IOperationFilter
     {
-        public void Apply(Operation operation, OperationFilterContext context)
+        public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             ApplyOperationAttributes(operation, context);
             ApplyOperationFilterAttributes(operation, context);
         }
 
-        private static void ApplyOperationAttributes(Operation operation, OperationFilterContext context)
+        private static void ApplyOperationAttributes(OpenApiOperation operation, OperationFilterContext context)
         {
             var attribute = context.ApiDescription.ActionAttributes()
                 .OfType<SwaggerOperationAttribute>()
@@ -23,13 +25,13 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 operation.OperationId = attribute.OperationId;
 
             if (attribute.Tags != null)
-                operation.Tags = attribute.Tags;
+                operation.Tags = OpenApiDocumentConversionHelpers.CreateTags(attribute.Tags);
 
             if (attribute.Schemes != null)
-                operation.Schemes = attribute.Schemes;
+                operation.Servers = OpenApiDocumentConversionHelpers.CreateServers(attribute.Schemes);
         }
 
-        public static void ApplyOperationFilterAttributes(Operation operation, OperationFilterContext context)
+        public static void ApplyOperationFilterAttributes(OpenApiOperation operation, OperationFilterContext context)
         {
             var apiDesc = context.ApiDescription;
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
@@ -8,12 +9,12 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
     {
         public SchemaRegistrySettings()
         {
-            CustomTypeMappings = new Dictionary<Type, Func<Schema>>();
+            CustomTypeMappings = new Dictionary<Type, Func<OpenApiSchema>>();
             SchemaIdSelector = (type) => type.FriendlyId(false);
             SchemaFilters = new List<ISchemaFilter>();
         }
 
-        public IDictionary<Type, Func<Schema>> CustomTypeMappings { get; private set; }
+        public IDictionary<Type, Func<OpenApiSchema>> CustomTypeMappings { get; private set; }
 
         public bool DescribeAllEnumsAsStrings { get; set; }
 

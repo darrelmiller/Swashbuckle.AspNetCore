@@ -1,4 +1,5 @@
 ﻿using System;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
@@ -6,10 +7,10 @@ namespace Basic.Swagger
 {
     public class ExamplesSchemaFilter : ISchemaFilter
     {
-        public void Apply(Schema schema, SchemaFilterContext context)
+        public void Apply(OpenApiSchema schema, SchemaFilterContext context)
         {
             var type = context.SystemType;
-            schema.Example = GetExampleOrNullFor(context.SystemType);
+            schema.Example = null;//TOFIX GetExampleOrNullFor(context.SystemType);
         }
 
         private object GetExampleOrNullFor(Type systemType)

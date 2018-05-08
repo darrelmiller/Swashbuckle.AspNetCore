@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
+using Microsoft.OpenApi.Models;
 
 namespace Swashbuckle.AspNetCore.Swagger
 {
@@ -8,7 +9,7 @@ namespace Swashbuckle.AspNetCore.Swagger
     {
         public SwaggerOptions()
         {
-            PreSerializeFilters = new List<Action<SwaggerDocument, HttpRequest>>();
+            PreSerializeFilters = new List<Action<OpenApiDocument, HttpRequest>>();
         }
 
         /// <summary>
@@ -17,9 +18,9 @@ namespace Swashbuckle.AspNetCore.Swagger
         public string RouteTemplate { get; set; } = "swagger/{documentName}/swagger.json";
 
         /// <summary>
-        /// Actions that can be applied SwaggerDocument's before they're serialized to JSON.
+        /// Actions that can be applied OpenApiDocument's before they're serialized to JSON.
         /// Useful for setting metadata that's derived from the current request
         /// </summary>
-        public List<Action<SwaggerDocument, HttpRequest>> PreSerializeFilters { get; private set; }
+        public List<Action<OpenApiDocument, HttpRequest>> PreSerializeFilters { get; private set; }
     }
 }

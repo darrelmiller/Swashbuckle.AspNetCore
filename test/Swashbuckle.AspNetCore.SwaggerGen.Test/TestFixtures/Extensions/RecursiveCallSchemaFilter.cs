@@ -1,13 +1,14 @@
 ﻿using System.Collections.Generic;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 {
     public class RecursiveCallSchemaFilter : ISchemaFilter
     {
-        public void Apply(Schema model, SchemaFilterContext context)
+        public void Apply(OpenApiSchema model, SchemaFilterContext context)
         {
-            model.Properties = new Dictionary<string, Schema>();
+            model.Properties = new Dictionary<string, OpenApiSchema>();
             model.Properties.Add("ExtraProperty", context.SchemaRegistry.GetOrRegister(typeof(ComplexType)));
         }
     }

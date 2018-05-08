@@ -4,6 +4,7 @@ using Moq;
 using Swashbuckle.AspNetCore.Swagger;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.OpenApi.Models;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 {
@@ -12,7 +13,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [Fact]
         public void Apply_DelegatesToSpecifiedFilter_IfTypeDecoratedWithFilterAttribute()
         {
-            IEnumerable<Schema> schemas;
+            IEnumerable<OpenApiSchema> schemas;
             var filterContexts = new[]
             {
                 FilterContextFor(typeof(SwaggerAnnotatedClass)),
@@ -20,7 +21,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             };
 
             schemas = filterContexts.Select(c => {
-                var schema = new Schema();
+                var schema = new OpenApiSchema();
                 Subject().Apply(schema, c);
                 return schema;
             });

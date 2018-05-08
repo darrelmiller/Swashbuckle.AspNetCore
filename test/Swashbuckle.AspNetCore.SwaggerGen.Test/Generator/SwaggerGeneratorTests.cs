@@ -4,6 +4,9 @@ using System.Collections.Generic;
 using Newtonsoft.Json;
 using Xunit;
 using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
+using Swashbuckle.AspNetCore.Swagger.Model;
+using Microsoft.OpenApi.Extensions;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 {
@@ -20,8 +23,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [Fact]
         public void GetSwagger_GeneratesOneOrMoreDocuments_AsSpecifiedBySettings()
         {
-            var v1Info = new Info { Version = "v2", Title = "API V2" };
-            var v2Info = new Info { Version = "v1", Title = "API V1" };
+            var v1Info = new OpenApiInfo { Version = "v2", Title = "API V2" };
+            var v2Info = new OpenApiInfo { Version = "v1", Title = "API V1" };
 
             var subject = Subject(
                 setupApis: apis =>
@@ -84,34 +87,34 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var swagger = subject.GetSwagger("v1");
 
             // GET collection
-            var operation = swagger.Paths["/collection"].Get;
+            var operation = swagger.Paths["/collection"].Operations[OperationType.Get];
             Assert.NotNull(operation);
-            Assert.Empty(operation.Consumes);
-            Assert.Equal(new[] { "application/json", "text/json" }, operation.Produces.ToArray());
+            Assert.Null(operation.RequestBody);
+            Assert.Equal(new[] { "application/json", "text/json" }, operation.Responses.First().Value.Content.Keys.ToArray());
             Assert.Null(operation.Deprecated);
             // PUT collection/{id}
-            operation = swagger.Paths["/collection/{id}"].Put;
+            operation = swagger.Paths["/collection/{id}"].Operations[OperationType.Put];
             Assert.NotNull(operation);
-            Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.Consumes.ToArray());
-            Assert.Empty(operation.Produces.ToArray());
+            Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.RequestBody.Content.Keys.ToArray());
+            Assert.Empty(operation.Responses.First().Value.Content.Keys.ToArray());
             Assert.Null(operation.Deprecated);
             // POST collection
-            operation = swagger.Paths["/collection"].Post;
+            operation = swagger.Paths["/collection"].Operations[OperationType.Post];
             Assert.NotNull(operation);
-            Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.Consumes.ToArray());
-            Assert.Empty(operation.Produces.ToArray());
+            Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.RequestBody.Content.Keys.ToArray());
+            Assert.Empty(operation.Responses.First().Value.Content.Keys.ToArray());
             Assert.Null(operation.Deprecated);
             // DELETE collection/{id}
-            operation = swagger.Paths["/collection/{id}"].Delete;
+            operation = swagger.Paths["/collection/{id}"].Operations[OperationType.Delete];
             Assert.NotNull(operation);
-            Assert.Empty(operation.Consumes.ToArray());
-            Assert.Empty(operation.Produces.ToArray());
+            Assert.Null(operation.RequestBody);
+            Assert.Empty(operation.Responses.First().Value.Content.ToArray());
             Assert.Null(operation.Deprecated);
             // PATCH collection
-            operation = swagger.Paths["/collection/{id}"].Patch;
+            operation = swagger.Paths["/collection/{id}"].Operations[OperationType.Patch];
             Assert.NotNull(operation);
-            Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.Consumes.ToArray());
-            Assert.Empty(operation.Produces.ToArray());
+            Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.RequestBody.Content.Keys.ToArray());
+            Assert.Empty(operation.Responses.SelectMany(r => r.Value.Content.Keys).ToArray());
             Assert.Null(operation.Deprecated);
         }
 
@@ -129,7 +132,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            Assert.Equal(expectedOperationId, swagger.Paths["/" + routeTemplate].Get.OperationId);
+            Assert.Equal(expectedOperationId, swagger.Paths["/" + routeTemplate].Operations[OperationType.Get].OperationId);
         }
 
         [Fact]
@@ -140,7 +143,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var operation = swagger.Paths["/collection"].Get;
+            var operation = swagger.Paths["/collection"].Operations[OperationType.Get];
             Assert.Null(operation.Parameters);
         }
 
@@ -150,7 +153,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [InlineData("collection", nameof(FakeActions.AcceptsStringFromHeader), "header")]
         [InlineData("collection", nameof(FakeActions.AcceptsStringFromForm), "formData")]
         [InlineData("collection", nameof(FakeActions.AcceptsStringFromQuery), "query")]
-        public void GetSwagger_GeneratesNonBodyParameters_ForPathQueryHeaderOrFormBoundParams(
+        public void GetSwagger_GeneratesOpenApiParameters_ForPathQueryHeaderOrFormBoundParams(
             string routeTemplate,
             string actionFixtureName,
             string expectedIn)
@@ -159,13 +162,13 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var param = swagger.Paths["/" + routeTemplate].Get.Parameters.First();
-            Assert.IsAssignableFrom<NonBodyParameter>(param);
-            var nonBodyParam = param as NonBodyParameter;
+            var param = swagger.Paths["/" + routeTemplate].Operations[OperationType.Get].Parameters.First();
+            Assert.IsAssignableFrom<OpenApiParameter>(param);
+            var nonBodyParam = param as OpenApiParameter;
             Assert.NotNull(nonBodyParam);
             Assert.Equal("param", nonBodyParam.Name);
-            Assert.Equal(expectedIn, nonBodyParam.In);
-            Assert.Equal("string", nonBodyParam.Type);
+            Assert.Equal(expectedIn, nonBodyParam.In.GetDisplayName());
+            Assert.Equal("string", nonBodyParam.Schema.Type);
         }
 
         [Fact]
@@ -176,8 +179,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var param = (NonBodyParameter)swagger.Paths["/resource"].Get.Parameters.First();
-            Assert.Equal("multi", param.CollectionFormat);
+            var param = swagger.Paths["/resource"].Operations[OperationType.Get].Parameters.First();
+            Assert.Equal(ParameterStyle.DeepObject, param.Style);
         }
 
         [Fact]
@@ -188,14 +191,15 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var param = swagger.Paths["/collection"].Post.Parameters.First();
-            Assert.IsAssignableFrom<BodyParameter>(param);
-            var bodyParam = param as BodyParameter;
-            Assert.Equal("param", bodyParam.Name);
-            Assert.Equal("body", bodyParam.In);
-            Assert.NotNull(bodyParam.Schema);
-            Assert.Equal("#/definitions/ComplexType", bodyParam.Schema.Ref);
-            Assert.Contains("ComplexType", swagger.Definitions.Keys);
+            var param = swagger.Paths["/collection"].Operations[OperationType.Post].RequestBody;
+            Assert.IsAssignableFrom<OpenApiRequestBody>(param);
+            //var bodyParam = param as BodyParameter;
+            //Assert.Equal("param", bodyParam.Name);
+            //Assert.Equal("body", bodyParam.In);
+            var schema = param.Content.First().Value.Schema;
+            Assert.NotNull(schema);
+            Assert.Equal("#/definitions/ComplexType", schema.Reference.ReferenceV2);
+            Assert.Contains("ComplexType", swagger.Components.Schemas.Keys);
         }
 
         [Fact]
@@ -207,11 +211,11 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var getParam = swagger.Paths["/collection"].Get.Parameters.First();
-            Assert.Equal("query", getParam.In);
+            var getParam = swagger.Paths["/collection"].Operations[OperationType.Get].Parameters.First();
+            Assert.Equal(ParameterLocation.Query, getParam.In);
             // Multiple post parameters as ApiExplorer flattens out the complex type
-            var postParams = swagger.Paths["/collection"].Post.Parameters;
-            Assert.All(postParams, (p) => Assert.Equal("query", p.In));
+            var postParams = swagger.Paths["/collection"].Operations[OperationType.Post].Parameters;
+            Assert.All(postParams, (p) => Assert.Equal(ParameterLocation.Query, p.In));
         }
 
         [Theory]
@@ -224,7 +228,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var param = swagger.Paths["/collection/{param}"].Get.Parameters.First();
+            var param = swagger.Paths["/collection/{param}"].Operations[OperationType.Get].Parameters.First();
             Assert.True(param.Required);
         }
 
@@ -252,7 +256,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var parameter = swagger.Paths["/collection"].Get.Parameters.First(p => p.Name == parameterName);
+            var parameter = swagger.Paths["/collection"].Operations[OperationType.Get].Parameters.First(p => p.Name == parameterName);
             Assert.True(parameter.Required == expectedRequired, $"{parameterName}.required != {expectedRequired}");
         }
 
@@ -264,12 +268,12 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var param = swagger.Paths["/collection/{param}"].Get.Parameters.First();
-            Assert.IsAssignableFrom<NonBodyParameter>(param);
-            var nonBodyParam = param as NonBodyParameter;
+            var param = swagger.Paths["/collection/{param}"].Operations[OperationType.Get].Parameters.First();
+            Assert.IsAssignableFrom<OpenApiParameter>(param);
+            var nonBodyParam = param as OpenApiParameter;
             Assert.Equal("param", nonBodyParam.Name);
-            Assert.Equal("path", nonBodyParam.In);
-            Assert.Equal("string", nonBodyParam.Type);
+            Assert.Equal(ParameterLocation.Path, nonBodyParam.In);
+            Assert.Equal("string", nonBodyParam.Schema.Type);
         }
 
         [Fact]
@@ -280,7 +284,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var operation = swagger.Paths["/collection"].Get;
+            var operation = swagger.Paths["/collection"].Operations[OperationType.Get];
             Assert.Null(operation.Parameters);
         }
 
@@ -292,7 +296,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var parameterNames = swagger.Paths["/collection"].Get
+            var parameterNames = swagger.Paths["/collection"].Operations[OperationType.Get]
                 .Parameters
                 .Select(p => p.Name);
             Assert.DoesNotContain("PropertyWithBindNever", parameterNames);
@@ -308,7 +312,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var operation = swagger.Paths["/collection"].Get;
+            var operation = swagger.Paths["/collection"].Operations[OperationType.Get];
             Assert.Equal(3, operation.Parameters.Count);
             Assert.Equal("stringWithNoAttributes", operation.Parameters[0].Name);
             Assert.Equal("stringWithBindRequired", operation.Parameters[1].Name);
@@ -332,14 +336,14 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var responses = swagger.Paths["/collection"].Get.Responses;
+            var responses = swagger.Paths["/collection"].Operations[OperationType.Get].Responses;
             Assert.Equal(new[] { expectedStatusCode }, responses.Keys.ToArray());
             var response = responses[expectedStatusCode];
             Assert.Equal(expectedDescriptions, response.Description);
             if (expectASchema)
-                Assert.NotNull(response.Schema);
+                Assert.NotNull(response.Content.First().Value.Schema);
             else
-                Assert.Null(response.Schema);
+                Assert.Null(response.Content.First().Value.Schema);
         }
 
         [Fact]
@@ -350,14 +354,14 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var responses = swagger.Paths["/collection"].Get.Responses;
+            var responses = swagger.Paths["/collection"].Operations[OperationType.Get].Responses;
             Assert.Equal(new[] { "204", "400" }, responses.Keys.ToArray());
             var response1 = responses["204"];
             Assert.Equal("Success", response1.Description);
-            Assert.Null(response1.Schema);
+            Assert.Null(response1.Content.First().Value.Schema);
             var response2 = responses["400"];
             Assert.Equal("Bad Request", response2.Description);
-            Assert.NotNull(response2.Schema);
+            Assert.NotNull(response2.Content.First().Value.Schema);
         }
 
         [Fact]
@@ -368,14 +372,14 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var responses = swagger.Paths["/collection"].Get.Responses;
+            var responses = swagger.Paths["/collection"].Operations[OperationType.Get].Responses;
             Assert.Equal(new[] { "204", "400" }, responses.Keys.ToArray());
             var response1 = responses["204"];
             Assert.Equal("Success", response1.Description);
-            Assert.Null(response1.Schema);
+            Assert.Null(response1.Content.First().Value.Schema);
             var response2 = responses["400"];
             Assert.Equal("Bad Request", response2.Description);
-            Assert.NotNull(response2.Schema);
+            Assert.NotNull(response2.Content.First().Value.Schema);
         }
 
         [Fact]
@@ -386,7 +390,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var operation = swagger.Paths["/collection"].Get;
+            var operation = swagger.Paths["/collection"].Operations[OperationType.Get];
             Assert.True(operation.Deprecated);
         }
 
@@ -402,9 +406,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            Assert.Contains("basic", swagger.SecurityDefinitions.Keys);
-            var scheme = swagger.SecurityDefinitions["basic"];
-            Assert.Equal("basic", scheme.Type);
+            Assert.Contains("basic", swagger.Components.SecuritySchemes.Keys);
+            var scheme = swagger.Components.SecuritySchemes["basic"];
+            Assert.Equal(SecuritySchemeType.Http, scheme.Type);
+            Assert.Equal("basic", scheme.Scheme);
             Assert.Equal("Basic HTTP Authentication", scheme.Description);
         }
 
@@ -422,14 +427,14 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            Assert.Contains("apiKey", swagger.SecurityDefinitions.Keys);
-            var scheme = swagger.SecurityDefinitions["apiKey"];
-            Assert.IsAssignableFrom<ApiKeyScheme>(scheme);
-            var apiKeyScheme = scheme as ApiKeyScheme;
-            Assert.Equal("apiKey", apiKeyScheme.Type);
+            Assert.Contains("apiKey", swagger.Components.SecuritySchemes.Keys);
+            var scheme = swagger.Components.SecuritySchemes["apiKey"];
+            Assert.IsAssignableFrom<OpenApiSecurityScheme>(scheme);
+            var apiKeyScheme = scheme as OpenApiSecurityScheme;
+            Assert.Equal(SecuritySchemeType.ApiKey, apiKeyScheme.Type);
             Assert.Equal("API Key Authentication", apiKeyScheme.Description);
             Assert.Equal("apiKey", apiKeyScheme.Name);
-            Assert.Equal("header", apiKeyScheme.In);
+            Assert.Equal(ParameterLocation.Header, apiKeyScheme.In);
         }
 
         [Fact]
@@ -452,18 +457,19 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            Assert.Contains("oauth2", swagger.SecurityDefinitions.Keys);
-            var scheme = swagger.SecurityDefinitions["oauth2"];
-            Assert.IsAssignableFrom<OAuth2Scheme>(scheme);
-            var oAuth2Scheme = scheme as OAuth2Scheme;
-            Assert.Equal("oauth2", oAuth2Scheme.Type);
+            Assert.Contains("oauth2", swagger.Components.SecuritySchemes.Keys);
+            var scheme = swagger.Components.SecuritySchemes["oauth2"];
+            Assert.IsAssignableFrom<OpenApiSecurityScheme>(scheme);
+            var oAuth2Scheme = scheme as OpenApiSecurityScheme;
+            Assert.Equal(SecuritySchemeType.OAuth2, oAuth2Scheme.Type);
             Assert.Equal("OAuth2 Authorization Code Grant", oAuth2Scheme.Description);
-            Assert.Equal("accessCode", oAuth2Scheme.Flow);
-            Assert.Equal("https://tempuri.org/auth", oAuth2Scheme.AuthorizationUrl);
-            Assert.Equal("https://tempuri.org/token", oAuth2Scheme.TokenUrl);
-            Assert.Equal(new[] { "read", "write" }, oAuth2Scheme.Scopes.Keys.ToArray());
-            Assert.Equal("Read access to protected resources", oAuth2Scheme.Scopes["read"]);
-            Assert.Equal("Write access to protected resources", oAuth2Scheme.Scopes["write"]);
+            Assert.NotNull(oAuth2Scheme.Flows.AuthorizationCode);
+            var flow = oAuth2Scheme.Flows.AuthorizationCode;
+            Assert.Equal("https://tempuri.org/auth", flow.AuthorizationUrl.AbsoluteUri);
+            Assert.Equal("https://tempuri.org/token", flow.TokenUrl.AbsoluteUri);
+            Assert.Equal(new[] { "read", "write" }, flow.Scopes.Keys.ToArray());
+            Assert.Equal("Read access to protected resources", flow.Scopes["read"]);
+            Assert.Equal("Write access to protected resources", flow.Scopes["write"]);
         }
 
         [Fact]
@@ -495,8 +501,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            Assert.Equal(new[] { "collection1" }, swagger.Paths["/collection1"].Get.Tags);
-            Assert.Equal(new[] { "collection2" }, swagger.Paths["/collection2"].Get.Tags);
+            Assert.Equal(new[] { "collection1" }, swagger.Paths["/collection1"].Operations[OperationType.Get].Tags.Select(t => t.Name).ToArray());
+            Assert.Equal(new[] { "collection2" }, swagger.Paths["/collection2"].Operations[OperationType.Get].Tags.Select(t => t.Name).ToArray());
         }
 
         [Fact]
@@ -535,7 +541,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var operation = swagger.Paths["/collection"].Get;
+            var operation = swagger.Paths["/collection"].Operations[OperationType.Get];
             Assert.NotEmpty(operation.Extensions);
         }
 
@@ -558,7 +564,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var param = swagger.Paths["/{version}/collection"].Get.Parameters.First();
+            var param = swagger.Paths["/{version}/collection"].Operations[OperationType.Get].Parameters.First();
             Assert.Equal("version", param.Name);
             Assert.Equal(true, param.Required);
         }
@@ -606,7 +612,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             var swagger = subject.GetSwagger("v1");
 
-            var operation = swagger.Paths["/collection"].Get;
+            var operation = swagger.Paths["/collection"].Operations[OperationType.Get];
             Assert.Null(operation.Parameters); // first one has no parameters
         }
 
@@ -618,7 +624,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             setupApis?.Invoke(apiDescriptionsProvider);
 
             var options = new SwaggerGeneratorSettings();
-            options.SwaggerDocs.Add("v1", new Info { Title = "API", Version = "v1" });
+            options.SwaggerDocs.Add("v1", new OpenApiInfo { Title = "API", Version = "v1" });
 
             configure?.Invoke(options);
 

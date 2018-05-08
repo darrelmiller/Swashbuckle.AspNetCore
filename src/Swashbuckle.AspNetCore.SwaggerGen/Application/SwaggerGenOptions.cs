@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
@@ -48,7 +49,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         /// </summary>
         /// <param name="name">A URI-friendly name that uniquely identifies the document</param>
         /// <param name="info">Global metadata to be included in the Swagger output</param>
-        public void SwaggerDoc(string name, Info info)
+        public void SwaggerDoc(string name, OpenApiInfo info)
         {
             _swaggerGeneratorSettings.SwaggerDocs.Add(name, info);
         }
@@ -138,7 +139,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         /// </summary>
         /// <param name="type">System type</param>
         /// <param name="schemaFactory">A factory method that generates Schema's for the provided type</param>
-        public void MapType(Type type, Func<Schema> schemaFactory)
+        public void MapType(Type type, Func<OpenApiSchema> schemaFactory)
         {
             _schemaRegistrySettings.CustomTypeMappings.Add(type, schemaFactory);
         }
@@ -148,7 +149,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         /// </summary>
         /// <typeparam name="T">System type</typeparam>
         /// <param name="schemaFactory">A factory method that generates Schema's for the provided type</param>
-        public void MapType<T>(Func<Schema> schemaFactory)
+        public void MapType<T>(Func<OpenApiSchema> schemaFactory)
         {
             MapType(typeof(T), schemaFactory);
         }

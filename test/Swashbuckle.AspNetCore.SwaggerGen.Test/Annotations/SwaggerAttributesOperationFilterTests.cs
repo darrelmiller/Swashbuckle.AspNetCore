@@ -2,6 +2,8 @@
 using Newtonsoft.Json;
 using Xunit;
 using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
+using System;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 {
@@ -10,7 +12,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [Fact]
         public void Apply_AssignsProperties_FromActionAttribute()
         {
-            var operation = new Operation
+            var operation = new OpenApiOperation
             {
                 OperationId = "foobar" 
             };
@@ -19,14 +21,14 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             Subject().Apply(operation, filterContext);
 
             Assert.Equal("CustomOperationId", operation.OperationId);
-            Assert.Equal(new[] { "customTag" }, operation.Tags.ToArray());
-            Assert.Equal(new[] { "customScheme" }, operation.Schemes.ToArray());
+            Assert.Equal(new[] { "customTag" }, operation.Tags.Select(t=> t.Name).ToArray());
+            Assert.Equal(new[] { "customScheme" }, operation.Servers.Select(s => new Uri(s.Url).Scheme).ToArray());
         }
 
         [Fact]
         public void Apply_DelegatesToSpecifiedFilter_IfControllerAnnotatedWithFilterAttribute()
         {
-            var operation = new Operation
+            var operation = new OpenApiOperation
             {
                 OperationId = "foobar" 
             };
@@ -43,7 +45,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [Fact]
         public void Apply_DelegatesToSpecifiedFilter_IfActionAnnotatedWithFilterAttribute()
         {
-            var operation = new Operation
+            var operation = new OpenApiOperation
             {
                 OperationId = "foobar" 
             };

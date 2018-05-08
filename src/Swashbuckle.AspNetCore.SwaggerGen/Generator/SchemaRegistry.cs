@@ -7,6 +7,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using Newtonsoft.Json.Converters;
 using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Any;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
@@ -25,12 +27,12 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             _jsonContractResolver = _jsonSerializerSettings.ContractResolver ?? new DefaultContractResolver();
             _settings = settings ?? new SchemaRegistrySettings();
             _schemaIdManager = new SchemaIdManager(_settings.SchemaIdSelector);
-            Definitions = new Dictionary<string, Schema>();
+            Definitions = new Dictionary<string, OpenApiSchema>();
         }
 
-        public IDictionary<string, Schema> Definitions { get; private set; }
+        public IDictionary<string, OpenApiSchema> Definitions { get; private set; }
 
-        public Schema GetOrRegister(Type type)
+        public OpenApiSchema GetOrRegister(Type type)
         {
             var referencedTypes = new Queue<Type>();
             var schema = CreateSchema(type, referencedTypes);
@@ -52,7 +54,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return schema;
         }
 
-        private Schema CreateSchema(Type type, Queue<Type> referencedTypes)
+        private OpenApiSchema CreateSchema(Type type, Queue<Type> referencedTypes)
         {
             // If Option<T> (F#), use the type argument
             if (type.IsFSharpOption())
@@ -74,15 +76,18 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 : CreateInlineSchema(type, referencedTypes);
         }
 
-        private Schema CreateReferenceSchema(Type type, Queue<Type> referencedTypes)
+        private OpenApiSchema CreateReferenceSchema(Type type, Queue<Type> referencedTypes)
         {
             referencedTypes.Enqueue(type);
-            return new Schema { Ref = "#/definitions/" + _schemaIdManager.IdFor(type) };
+            return new OpenApiSchema {
+                Reference = new OpenApiReference() { Id = _schemaIdManager.IdFor(type), Type = ReferenceType.Schema },
+                UnresolvedReference = true
+            };
         }
 
-        private Schema CreateInlineSchema(Type type, Queue<Type> referencedTypes)
+        private OpenApiSchema CreateInlineSchema(Type type, Queue<Type> referencedTypes)
         {
-            Schema schema;
+            OpenApiSchema schema;
 
             var jsonContract = _jsonContractResolver.ResolveContract(type);
 
@@ -103,7 +108,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                     schema = CreateObjectSchema((JsonObjectContract)jsonContract, referencedTypes);
                 else
                     // None of the above, fallback to abstract "object"
-                    schema = new Schema { Type = "object" };
+                    schema = new OpenApiSchema { Type = "object" };
             }
 
             var filterContext = new SchemaFilterContext(type, jsonContract, this);
@@ -115,7 +120,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return schema;
         }
 
-        private Schema CreatePrimitiveSchema(JsonPrimitiveContract primitiveContract)
+        private OpenApiSchema CreatePrimitiveSchema(JsonPrimitiveContract primitiveContract)
         {
             // If Nullable<T>, use the type argument
             var type = primitiveContract.UnderlyingType.IsNullable()
@@ -129,10 +134,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 return PrimitiveTypeMap[type]();
 
             // None of the above, fallback to string
-            return new Schema { Type = "string" };
+            return new OpenApiSchema { Type = "string" };
         }
 
-        private Schema CreateEnumSchema(JsonPrimitiveContract primitiveContract, Type type)
+        private OpenApiSchema CreateEnumSchema(JsonPrimitiveContract primitiveContract, Type type)
         {
             var stringEnumConverter = primitiveContract.Converter as StringEnumConverter
                 ?? _jsonSerializerSettings.Converters.OfType<StringEnumConverter>().FirstOrDefault();
@@ -156,29 +161,29 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                         return camelCase ? name.ToCamelCase() : name;
                     });
 
-                return new Schema
+                return new OpenApiSchema
                 {
                     Type = "string",
-                    Enum = enumNames.ToArray()
+                    Enum = enumNames.Select(s => new OpenApiString(s)).ToArray()
                 };
             }
 
-            return new Schema
+            return new OpenApiSchema
             {
                 Type = "integer",
                 Format = "int32",
-                Enum = Enum.GetValues(type).Cast<object>().ToArray()
+//TODO:                Enum = Enum.GetValues(type).Cast<object>().ToArray()
             };
         }
 
-        private Schema CreateDictionarySchema(JsonDictionaryContract dictionaryContract, Queue<Type> referencedTypes)
+        private OpenApiSchema CreateDictionarySchema(JsonDictionaryContract dictionaryContract, Queue<Type> referencedTypes)
         {
             var keyType = dictionaryContract.DictionaryKeyType ?? typeof(object);
             var valueType = dictionaryContract.DictionaryValueType ?? typeof(object);
 
             if (keyType.GetTypeInfo().IsEnum)
             {
-                return new Schema
+                return new OpenApiSchema
                 {
                     Type = "object",
                     Properties = Enum.GetNames(keyType).ToDictionary(
@@ -189,7 +194,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             }
             else
             {
-                return new Schema
+                return new OpenApiSchema
                 {
                     Type = "object",
                     AdditionalProperties = CreateSchema(valueType, referencedTypes)
@@ -197,17 +202,17 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             }
         }
 
-        private Schema CreateArraySchema(JsonArrayContract arrayContract, Queue<Type> referencedTypes)
+        private OpenApiSchema CreateArraySchema(JsonArrayContract arrayContract, Queue<Type> referencedTypes)
         {
             var itemType = arrayContract.CollectionItemType ?? typeof(object);
-            return new Schema
+            return new OpenApiSchema
             {
                 Type = "array",
                 Items = CreateSchema(itemType, referencedTypes)
             };
         }
 
-        private Schema CreateObjectSchema(JsonObjectContract jsonContract, Queue<Type> referencedTypes)
+        private OpenApiSchema CreateObjectSchema(JsonObjectContract jsonContract, Queue<Type> referencedTypes)
         {
             var applicableJsonProperties = jsonContract.Properties
                 .Where(prop => !prop.Ignored)
@@ -227,36 +232,36 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                     prop => CreateSchema(prop.PropertyType, referencedTypes).AssignValidationProperties(prop)
                 );
 
-            var schema = new Schema
+            var schema = new OpenApiSchema
             {
                 Required = required.Any() ? required : null, // required can be null but not empty
                 Properties = properties,
-                AdditionalProperties = hasExtensionData ? new Schema { Type = "object" } : null,
+                AdditionalProperties = hasExtensionData ? new OpenApiSchema { Type = "object" } : null,
                 Type = "object"
             };
 
             return schema;
         }
 
-        private static readonly Dictionary<Type, Func<Schema>> PrimitiveTypeMap = new Dictionary<Type, Func<Schema>>
+        private static readonly Dictionary<Type, Func<OpenApiSchema>> PrimitiveTypeMap = new Dictionary<Type, Func<OpenApiSchema>>
         {
-            { typeof(short), () => new Schema { Type = "integer", Format = "int32" } },
-            { typeof(ushort), () => new Schema { Type = "integer", Format = "int32" } },
-            { typeof(int), () => new Schema { Type = "integer", Format = "int32" } },
-            { typeof(uint), () => new Schema { Type = "integer", Format = "int32" } },
-            { typeof(long), () => new Schema { Type = "integer", Format = "int64" } },
-            { typeof(ulong), () => new Schema { Type = "integer", Format = "int64" } },
-            { typeof(float), () => new Schema { Type = "number", Format = "float" } },
-            { typeof(double), () => new Schema { Type = "number", Format = "double" } },
-            { typeof(decimal), () => new Schema { Type = "number", Format = "double" } },
-            { typeof(byte), () => new Schema { Type = "integer", Format = "int32" } },
-            { typeof(sbyte), () => new Schema { Type = "integer", Format = "int32" } },
-            { typeof(byte[]), () => new Schema { Type = "string", Format = "byte" } },
-            { typeof(sbyte[]), () => new Schema { Type = "string", Format = "byte" } },
-            { typeof(bool), () => new Schema { Type = "boolean" } },
-            { typeof(DateTime), () => new Schema { Type = "string", Format = "date-time" } },
-            { typeof(DateTimeOffset), () => new Schema { Type = "string", Format = "date-time" } },
-            { typeof(Guid), () => new Schema { Type = "string", Format = "uuid" } }
+            { typeof(short), () => new OpenApiSchema { Type = "integer", Format = "int32" } },
+            { typeof(ushort), () => new OpenApiSchema { Type = "integer", Format = "int32" } },
+            { typeof(int), () => new OpenApiSchema { Type = "integer", Format = "int32" } },
+            { typeof(uint), () => new OpenApiSchema { Type = "integer", Format = "int32" } },
+            { typeof(long), () => new OpenApiSchema { Type = "integer", Format = "int64" } },
+            { typeof(ulong), () => new OpenApiSchema { Type = "integer", Format = "int64" } },
+            { typeof(float), () => new OpenApiSchema { Type = "number", Format = "float" } },
+            { typeof(double), () => new OpenApiSchema { Type = "number", Format = "double" } },
+            { typeof(decimal), () => new OpenApiSchema { Type = "number", Format = "double" } },
+            { typeof(byte), () => new OpenApiSchema { Type = "integer", Format = "int32" } },
+            { typeof(sbyte), () => new OpenApiSchema { Type = "integer", Format = "int32" } },
+            { typeof(byte[]), () => new OpenApiSchema { Type = "string", Format = "byte" } },
+            { typeof(sbyte[]), () => new OpenApiSchema { Type = "string", Format = "byte" } },
+            { typeof(bool), () => new OpenApiSchema { Type = "boolean" } },
+            { typeof(DateTime), () => new OpenApiSchema { Type = "string", Format = "date-time" } },
+            { typeof(DateTimeOffset), () => new OpenApiSchema { Type = "string", Format = "date-time" } },
+            { typeof(Guid), () => new OpenApiSchema { Type = "string", Format = "uuid" } }
         };
     }
 }

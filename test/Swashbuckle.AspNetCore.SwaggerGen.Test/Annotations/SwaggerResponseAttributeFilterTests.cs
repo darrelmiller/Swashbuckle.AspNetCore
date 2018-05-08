@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Xunit;
 using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 {
@@ -10,7 +11,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [Fact]
         public void Apply_SetsResponses_FromAttributes()
         {
-            var operation = new Operation
+            var operation = new OpenApiOperation
             {
                 OperationId = "foobar"
             };
@@ -22,10 +23,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             Assert.Equal(new[] { "204", "400" }, responses.Keys.ToArray());
             var response1 = responses["204"];
             Assert.Equal("No content is returned.", response1.Description);
-            Assert.Null(response1.Schema);
+            Assert.Null(response1.Content.First().Value.Schema);
             var response2 = responses["400"];
             Assert.Equal("This returns a dictionary.", response2.Description);
-            Assert.NotNull(response2.Schema);
+            Assert.NotNull(response2.Content.First().Value.Schema);
         }
 
         private OperationFilterContext FilterContextFor(

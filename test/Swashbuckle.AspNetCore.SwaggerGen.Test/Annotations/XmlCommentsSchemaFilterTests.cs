@@ -6,6 +6,7 @@ using System.IO;
 using Newtonsoft.Json.Serialization;
 using Xunit;
 using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 {
@@ -19,9 +20,9 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             Type type,
             string expectedDescription)
         {
-            var schema = new Schema
+            var schema = new OpenApiSchema
             {
-                Properties = new Dictionary<string, Schema>()
+                Properties = new Dictionary<string, OpenApiSchema>()
             };
             var filterContext = FilterContextFor(type);
 
@@ -40,11 +41,11 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             string propertyName,
             string expectedDescription)
         {
-            var schema = new Schema
+            var schema = new OpenApiSchema
             {
-                Properties = new Dictionary<string, Schema>()
+                Properties = new Dictionary<string, OpenApiSchema>()
                 {
-                    { propertyName, new Schema() }
+                    { propertyName, new OpenApiSchema() }
                 }
             };
             var filterContext = FilterContextFor(type);

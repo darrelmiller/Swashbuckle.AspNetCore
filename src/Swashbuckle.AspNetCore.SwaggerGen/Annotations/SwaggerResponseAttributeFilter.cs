@@ -2,13 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.ApiExplorer;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.Swagger.Model;
 
 namespace Swashbuckle.AspNetCore.SwaggerGen
 {
     public class SwaggerResponseAttributeFilter : IOperationFilter
     {
-        public void Apply(Operation operation, OperationFilterContext context)
+        public void Apply(OpenApiOperation operation, OperationFilterContext context)
         {
             var apiDesc = context.ApiDescription;
             var attributes = GetActionAttributes(apiDesc);
@@ -18,7 +20,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
             if (operation.Responses == null)
             {
-                operation.Responses = new Dictionary<string, Response>();
+                operation.Responses = new OpenApiResponses();
             }
 
             foreach (var attribute in attributes)
@@ -27,20 +29,20 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             }
         }
 
-        private static void ApplyAttribute(Operation operation, OperationFilterContext context, SwaggerResponseAttribute attribute)
+        private static void ApplyAttribute(OpenApiOperation operation, OperationFilterContext context, SwaggerResponseAttribute attribute)
         {
             var key = attribute.StatusCode.ToString();
-            Response response;
+            OpenApiResponse response;
             if (!operation.Responses.TryGetValue(key, out response))
             {
-                response = new Response();
+                response = new OpenApiResponse();
             }
 
             if (attribute.Description != null)
                 response.Description = attribute.Description;
 
             if (attribute.Type != null && attribute.Type != typeof(void))
-                response.Schema = context.SchemaRegistry.GetOrRegister(attribute.Type);
+                response.Content = OpenApiDocumentConversionHelpers.CreateContent(context.SchemaRegistry.GetOrRegister(attribute.Type));
 
             operation.Responses[key] = response;
         }

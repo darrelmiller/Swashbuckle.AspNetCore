@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Builder;
 using Swashbuckle.AspNetCore.Swagger;
 using Swashbuckle.AspNetCore.SwaggerGen;
 using MultipleVersions.Swagger;
+using Microsoft.OpenApi.Models;
 
 namespace MultipleVersions
 {
@@ -29,8 +30,8 @@ namespace MultipleVersions
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new Info { Version = "v1", Title = "API V1" });
-                c.SwaggerDoc("v2", new Info { Version = "v2", Title = "API V2" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Version = "v1", Title = "API V1" });
+                c.SwaggerDoc("v2", new OpenApiInfo { Version = "v2", Title = "API V2" });
 
                 c.DocInclusionPredicate((docName, apiDesc) =>
                 {

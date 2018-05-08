@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Swashbuckle.AspNetCore.Swagger;
 using GenericControllers.Swagger;
 using System.IO;
+using Microsoft.OpenApi.Models;
 
 namespace GenericControllers
 {
@@ -17,7 +18,7 @@ namespace GenericControllers
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1",
-                    new Info
+                    new OpenApiInfo
                     {
                         Version = "v1",
                         Title = "Swashbuckle Sample API",

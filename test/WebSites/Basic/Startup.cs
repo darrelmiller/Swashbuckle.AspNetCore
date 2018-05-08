@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Serialization;
-using Swashbuckle.AspNetCore.Swagger;
+using Swashbuckle.AspNetCore.Swagger.Model;
 using Basic.Swagger;
+using Microsoft.OpenApi.Models;
+using System;
 
 namespace Basic
 {
@@ -36,12 +38,12 @@ namespace Basic
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1",
-                    new Info
+                    new OpenApiInfo
                     {
                         Version = "v1",
                         Title = "Swashbuckle Sample API",
                         Description = "A sample API for testing Swashbuckle",
-                        TermsOfService = "Some terms ..."
+                        TermsOfService = new Uri("http://example.org/Someterms.html")
                     }
                 );
 
@@ -79,7 +81,7 @@ namespace Basic
 
             app.UseSwagger(c =>
             {
-                c.PreSerializeFilters.Add((swagger, httpReq) => swagger.Host = httpReq.Host.Value);
+                c.PreSerializeFilters.Add((swagger, httpReq) => swagger.UpdateHost(httpReq.Host.Value));
             });
 
             app.UseSwaggerUI(c =>

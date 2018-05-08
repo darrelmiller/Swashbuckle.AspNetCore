@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using OAuth2Integration.ResourceServer.Swagger;
 using Swashbuckle.AspNetCore.Swagger;
+using Microsoft.OpenApi.Models;
 
 namespace OAuth2Integration
 {
@@ -58,7 +59,7 @@ namespace OAuth2Integration
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1",
-                    new Info
+                    new OpenApiInfo
                     {
                         Title = "OAuth2Integration Example",
                         Version = "v1"
