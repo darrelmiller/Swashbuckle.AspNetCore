@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using OAuth2Integration.ResourceServer.Swagger;
 using Swashbuckle.AspNetCore.Swagger;
 using Microsoft.OpenApi.Models;
+using System;
 
 namespace OAuth2Integration
 {
@@ -67,15 +68,19 @@ namespace OAuth2Integration
                 );
 
                 // Define the OAuth2.0 scheme that's in use (i.e. Implicit Flow)
-                c.AddSecurityDefinition("oauth2", new OAuth2Scheme
+                c.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
                 {
-                    Type = "oauth2",
-                    Flow = "implicit",
-                    AuthorizationUrl = "/auth-server/connect/authorize",
-                    Scopes = new Dictionary<string, string>
-                    {
-                        { "readAccess", "Access read operations" },
-                        { "writeAccess", "Access write operations" }
+                    Type = SecuritySchemeType.OAuth2,
+                    Flows = new OpenApiOAuthFlows() {
+                        Implicit = new OpenApiOAuthFlow()
+                        {
+                            AuthorizationUrl = new System.Uri("/auth-server/connect/authorize", UriKind.Relative),
+                            Scopes = new Dictionary<string, string>
+                            {
+                                { "readAccess", "Access read operations" },
+                                { "writeAccess", "Access write operations" }
+                            }
+                        }
                     }
                 });
 

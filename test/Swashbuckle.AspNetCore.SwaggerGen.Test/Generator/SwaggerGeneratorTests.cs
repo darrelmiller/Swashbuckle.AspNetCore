@@ -398,9 +398,10 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         public void GetSwagger_GeneratesBasicAuthSecurityDefinition_IfSpecifiedBySettings()
         {
             var subject = Subject(configure: c =>
-                c.SecurityDefinitions.Add("basic", new BasicAuthScheme
+                c.SecurityDefinitions.Add("basic", new OpenApiSecurityScheme
                 {
-                    Type = "basic",
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "basic",
                     Description = "Basic HTTP Authentication"
                 }));
 
@@ -417,12 +418,12 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         public void GetSwagger_GeneratesApiKeySecurityDefinition_IfSpecifiedBySettings()
         {
             var subject = Subject(configure: c =>
-                c.SecurityDefinitions.Add("apiKey", new ApiKeyScheme
+                c.SecurityDefinitions.Add("apiKey", new OpenApiSecurityScheme
                 {
-                    Type = "apiKey",
+                    Type = SecuritySchemeType.ApiKey,
                     Description = "API Key Authentication",
                     Name = "apiKey",
-                    In = "header"
+                    In = ParameterLocation.Header
                 }));
 
             var swagger = subject.GetSwagger("v1");
@@ -441,17 +442,21 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         public void GetSwagger_GeneratesOAuthSecurityDefinition_IfSpecifiedBySettings()
         {
             var subject = Subject(configure: c =>
-                c.SecurityDefinitions.Add("oauth2", new OAuth2Scheme
+                c.SecurityDefinitions.Add("oauth2", new OpenApiSecurityScheme
                 {
-                    Type = "oauth2",
+                    Type = SecuritySchemeType.OAuth2,
                     Description = "OAuth2 Authorization Code Grant",
-                    Flow = "accessCode",
-                    AuthorizationUrl = "https://tempuri.org/auth",
-                    TokenUrl = "https://tempuri.org/token",
-                    Scopes = new Dictionary<string, string>
-                    {
-                        { "read", "Read access to protected resources" },
-                        { "write", "Write access to protected resources" }
+                    Flows = new OpenApiOAuthFlows() {
+                        AuthorizationCode = new OpenApiOAuthFlow()
+                        {
+                            AuthorizationUrl = new Uri("https://tempuri.org/auth", UriKind.Relative),
+                            TokenUrl = new Uri("https://tempuri.org/token", UriKind.Relative),
+                            Scopes = new Dictionary<string, string>
+                            {
+                                { "read", "Read access to protected resources" },
+                                { "write", "Write access to protected resources" }
+                            }
+                        }
                     }
                 }));
 

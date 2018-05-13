@@ -115,7 +115,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
         /// <param name="securityScheme">
         /// A description of the scheme - can be an instance of BasicAuthScheme, ApiKeyScheme or OAuth2Scheme
         /// </param>
-        public void AddSecurityDefinition(string name, SecurityScheme securityScheme)
+        public void AddSecurityDefinition(string name, OpenApiSecurityScheme securityScheme)
         {
             _swaggerGeneratorSettings.SecurityDefinitions.Add(name, securityScheme);
         }

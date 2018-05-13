@@ -168,11 +168,13 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 };
             }
 
+            new OpenApiPrimitive .Create()
+
             return new OpenApiSchema
             {
                 Type = "integer",
                 Format = "int32",
-//TODO:                Enum = Enum.GetValues(type).Cast<object>().ToArray()
+                Enum = Enum.GetValues(type).Cast<object>(). .ToArray()
             };
         }
 

@@ -14,7 +14,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             DocInclusionPredicate = (docName, api) => api.GroupName == null || api.GroupName == docName;
             TagSelector = (apiDesc) => apiDesc.ControllerName();
             SortKeySelector = (apiDesc) => TagSelector(apiDesc);
-            SecurityDefinitions = new Dictionary<string, SecurityScheme>();
+            SecurityDefinitions = new Dictionary<string, OpenApiSecurityScheme>();
             SecurityRequirements = new List<IDictionary<string, IEnumerable<string>>>();
             OperationFilters = new List<IOperationFilter>();
             DocumentFilters = new List<IDocumentFilter>();
@@ -34,7 +34,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
         public bool DescribeAllParametersInCamelCase { get; set; }
 
-        public IDictionary<string, SecurityScheme> SecurityDefinitions { get; private set; }
+        public IDictionary<string, OpenApiSecurityScheme> SecurityDefinitions { get; private set; }
 
         public IList<IDictionary<string, IEnumerable<string>>> SecurityRequirements { get; private set; }
 

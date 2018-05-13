@@ -50,7 +50,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             Assert.Equal("integer", schema.Type);
             Assert.Equal("int32", schema.Format);
-            Assert.Equal(new List<object> { AnEnum.Value1, AnEnum.Value2, AnEnum.X }, schema.Enum);
+            Assert.Equal(new List<object> { AnEnum.Value1, AnEnum.Value2, AnEnum.X }, schema.Enum.Cast<OpenApiString>().Select(s=>s.Value).ToList());
         }
 
         [Theory]
@@ -273,7 +273,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = Subject().GetOrRegister(typeof(JsonConvertedEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new List<object> { "Value1", "Value2", "X" }, schema.Enum);
+            Assert.Equal(new List<object> { "Value1", "Value2", "X" }, schema.Enum.Cast<OpenApiString>().Select(s=> s.Value).ToList());
         }
 
         [Fact]
@@ -287,7 +287,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = subject.GetOrRegister(typeof(AnEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new List<object> { "value1", "value2", "x" }, schema.Enum);
+            Assert.Equal(new List<object> { "value1", "value2", "x" }, schema.Enum.Cast<OpenApiString>().Select(s => s.Value).ToList());
         }
 
         [Fact]
@@ -314,7 +314,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = subject.GetOrRegister(typeof(ComplexType));
 
             Assert.Equal("string", schema.Type);
-            Assert.Null(schema.Properties);
+            Assert.Empty(schema.Properties);
         }
 
         [Theory]
@@ -372,7 +372,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = subject.GetOrRegister(typeof(AnEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new List<object> { "Value1", "Value2", "X" }, schema.Enum);
+            Assert.Equal(new List<object> { "Value1", "Value2", "X" }, schema.Enum.Cast<OpenApiString>().Select(s => s.Value).ToList());
         }
 
         [Fact]
@@ -387,7 +387,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             var schema = subject.GetOrRegister(typeof(AnEnum));
 
             Assert.Equal("string", schema.Type);
-            Assert.Equal(new List<object> { "value1", "value2", "x" }, schema.Enum);
+            Assert.Equal(new List<object> { "value1", "value2", "x" }, schema.Enum.Cast<OpenApiString>().Select(s => s.Value).ToList());
         }
 
         [Fact]
