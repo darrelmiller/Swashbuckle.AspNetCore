@@ -168,13 +168,13 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 };
             }
 
-            new OpenApiPrimitive .Create()
+            //new OpenApiPrimitive .Create()
 
             return new OpenApiSchema
             {
                 Type = "integer",
                 Format = "int32",
-                Enum = Enum.GetValues(type).Cast<object>(). .ToArray()
+       //         Enum = Enum.GetValues(type).Cast<object>().ToList()
             };
         }
 
@@ -236,7 +236,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
             var schema = new OpenApiSchema
             {
-                Required = required.Any() ? required : null, // required can be null but not empty
+                Required = (ISet<string>)(required.Any() ? required : null), // required can be null but not empty
                 Properties = properties,
                 AdditionalProperties = hasExtensionData ? new OpenApiSchema { Type = "object" } : null,
                 Type = "object"
