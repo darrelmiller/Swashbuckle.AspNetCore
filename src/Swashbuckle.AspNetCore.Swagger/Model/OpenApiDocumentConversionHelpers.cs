@@ -79,12 +79,24 @@ namespace Swashbuckle.AspNetCore.Swagger.Model
 
         public static ParameterLocation? CreateIn(string location)
         {
-            throw new NotImplementedException();
+            switch (location) {
+                case "query":
+                    return ParameterLocation.Query;
+                case "path":
+                    return ParameterLocation.Path;
+                case "header":
+                    return ParameterLocation.Header;
+                case "cookie":
+                    return ParameterLocation.Cookie;
+                default:
+                    throw new NotImplementedException();  // Will we get body here?
+            }
+
         }
 
         public static void UpdateParameter(OpenApiParameter nonBodyParam, OpenApiSchema schema)
         {
-            throw new NotImplementedException();
+            nonBodyParam.Schema = schema;
         }
 
     }

@@ -50,7 +50,9 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             Assert.Equal("integer", schema.Type);
             Assert.Equal("int32", schema.Format);
-            Assert.Equal(new List<object> { AnEnum.Value1, AnEnum.Value2, AnEnum.X }, schema.Enum.Cast<OpenApiString>().Select(s=>s.Value).ToList());
+            Assert.Equal(3, schema.Enum.Count());
+            Assert.Equal((int)AnEnum.Value1, ((OpenApiInteger)schema.Enum.First()).Value);
+            Assert.Equal((int)AnEnum.X, ((OpenApiInteger)schema.Enum.Last()).Value);
         }
 
         [Theory]

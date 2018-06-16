@@ -108,7 +108,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                     schema = CreateObjectSchema((JsonObjectContract)jsonContract, referencedTypes);
                 else
                     // None of the above, fallback to abstract "object"
-                    schema = new OpenApiSchema { Type = "object" };
+                    schema = new OpenApiSchema { Type = "object", Properties = null };
             }
 
             var filterContext = new SchemaFilterContext(type, jsonContract, this);
@@ -168,13 +168,12 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 };
             }
 
-            //new OpenApiPrimitive .Create()
 
             return new OpenApiSchema
             {
                 Type = "integer",
                 Format = "int32",
-       //         Enum = Enum.GetValues(type).Cast<object>().ToList()
+                Enum = Enum.GetValues(type).Cast<Object>().Select(e => new OpenApiInteger((int)e)).ToList<IOpenApiAny>()
             };
         }
 
@@ -236,7 +235,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
             var schema = new OpenApiSchema
             {
-                Required = (ISet<string>)(required.Any() ? required : null), // required can be null but not empty
+                Required = (required.Any() ? new HashSet<string>(required) : null), // required can be null but not empty
                 Properties = properties,
                 AdditionalProperties = hasExtensionData ? new OpenApiSchema { Type = "object" } : null,
                 Type = "object"
