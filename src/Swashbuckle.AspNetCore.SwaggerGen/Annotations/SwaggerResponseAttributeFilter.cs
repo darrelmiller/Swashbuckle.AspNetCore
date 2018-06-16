@@ -42,8 +42,22 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                 response.Description = attribute.Description;
 
             if (attribute.Type != null && attribute.Type != typeof(void))
-                response.Content = OpenApiDocumentConversionHelpers.CreateContent(context.SchemaRegistry.GetOrRegister(attribute.Type));
-
+            {
+                if (response.Content != null)
+                {
+                    // Apply schema to existing content objects
+                    foreach (var mediaType in response.Content.Values)
+                    {
+                        mediaType.Schema = context.SchemaRegistry.GetOrRegister(attribute.Type);
+                    }
+                } else
+                {
+                    // Create content objects based on support media types
+                    var mediaTypes = context.ApiDescription.SupportedResponseMediaTypes();
+                    response.Content = OpenApiDocumentConversionHelpers.CreateContent(mediaTypes, context.SchemaRegistry.GetOrRegister(attribute.Type));
+                }
+                
+            }
             operation.Responses[key] = response;
         }
 

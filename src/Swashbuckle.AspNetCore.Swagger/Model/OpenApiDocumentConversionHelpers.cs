@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
+using Microsoft.AspNetCore.Mvc.ApiExplorer;
 using Microsoft.OpenApi.Models;
 
 namespace Swashbuckle.AspNetCore.Swagger.Model
@@ -17,9 +19,16 @@ namespace Swashbuckle.AspNetCore.Swagger.Model
             return new List<OpenApiTag>();
         }
 
-        public static IDictionary<string, OpenApiMediaType> CreateContent(OpenApiSchema openApiSchema)
+        public static IDictionary<string, OpenApiMediaType> CreateContent(IEnumerable<string> mediaTypes, OpenApiSchema openApiSchema)
         {
-            throw new NotImplementedException();
+            var content = new Dictionary<string, OpenApiMediaType>();
+            foreach(var mediaType in mediaTypes)
+            {
+                var openApiMediaType = new OpenApiMediaType();
+                openApiMediaType.Schema = openApiSchema;
+                content.Add(mediaType, openApiMediaType);
+            }
+            return content;
         }
 
         public static IList<OpenApiServer> CreateServers(string[] schemes)
@@ -64,17 +73,63 @@ namespace Swashbuckle.AspNetCore.Swagger.Model
 
         public static IList<OpenApiSecurityRequirement> CreateSecurityRequirements(IList<IDictionary<string, IEnumerable<string>>> list)
         {
-            throw new NotImplementedException();
+            if (list == null)
+            {
+                return null;
+            }
+            var reqs = new List<OpenApiSecurityRequirement>();
+            foreach (var req in list)
+            {
+                var openApiReq = new OpenApiSecurityRequirement();
+                foreach(var schemePair in req)
+                {
+                    var openApiScheme = new OpenApiSecurityScheme()
+                    {
+                        Reference = new OpenApiReference()
+                        {
+                            Id = schemePair.Key,
+                            Type = ReferenceType.SecurityScheme
+                        },
+                        UnresolvedReference = true
+                    };
+                    openApiReq.Add(openApiScheme, schemePair.Value.ToList());
+                }
+                reqs.Add(openApiReq);
+            }
+            return reqs;
         }
 
-        public static OpenApiRequestBody CreateRequestBody(List<string> list)
+        public static OpenApiRequestBody CreateRequestBody(List<string> mediaTypes)
         {
-            throw new NotImplementedException();
+            var requestBody = new OpenApiRequestBody();
+            if (mediaTypes.Count > 0)
+            {
+                requestBody.Content = new Dictionary<string, OpenApiMediaType> ();
+            }
+            foreach (var mediatype in mediaTypes)
+            {
+                requestBody.Content.Add(mediatype, new OpenApiMediaType());
+            }
+            return requestBody;
         }
 
-        public static OpenApiResponses CreateResponses(List<string> list)
+        public static OpenApiResponses CreateResponses(List<string> mediaTypes)
         {
-            throw new NotImplementedException();
+            var responses = new OpenApiResponses();
+            var okResponse = new OpenApiResponse() {
+                Description = "Success",
+            };
+
+            if (mediaTypes.Count > 0)
+            {
+                okResponse.Content = new Dictionary<string, OpenApiMediaType>();
+            }
+            foreach (var mediatype in mediaTypes)
+            {
+                okResponse.Content.Add(mediatype, new OpenApiMediaType());
+            }
+            responses.Add("2XX", okResponse);
+            return responses;
         }
 
         public static ParameterLocation? CreateIn(string location)

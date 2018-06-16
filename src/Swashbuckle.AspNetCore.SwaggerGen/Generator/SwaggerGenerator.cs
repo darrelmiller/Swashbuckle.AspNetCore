@@ -140,6 +140,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                             && !paramDesc.IsPartOfCancellationToken();
                     })
                 .Select(paramDesc => CreateParameter(apiDescription, paramDesc, schemaRegistry))
+                .Where(p => p != null)
                 .ToList();
 
             var responses = apiDescription.SupportedResponseTypes
@@ -174,6 +175,11 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             ISchemaRegistry schemaRegistry)
         {
             var location = GetParameterLocation(apiDescription, paramDescription);
+
+            if (location == "body" || location == "formData")
+            {
+                return null;
+            }
 
             var name = _settings.DescribeAllParametersInCamelCase
                 ? paramDescription.Name.ToCamelCase()
@@ -237,7 +243,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return new OpenApiResponse
             {
                 Description = description,
-                Content = OpenApiDocumentConversionHelpers.CreateContent((apiResponseType.Type != null && apiResponseType.Type != typeof(void))
+                Content = OpenApiDocumentConversionHelpers.CreateContent(apiResponseType.ApiResponseFormats.Select(f => f.MediaType), (apiResponseType.Type != null && apiResponseType.Type != typeof(void))
                     ? schemaRegistry.GetOrRegister(apiResponseType.Type)
                     : null)
             };
