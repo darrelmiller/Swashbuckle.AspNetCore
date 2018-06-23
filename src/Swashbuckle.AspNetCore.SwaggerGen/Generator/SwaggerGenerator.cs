@@ -150,13 +150,29 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
                     apiResponseType => CreateResponse(apiResponseType, schemaRegistry)
                  );
 
+            var bodyParameterDescriptions = apiDescription.ParameterDescriptions
+                .Where(paramDesc =>
+                {
+                    return paramDesc.Source.IsFromRequest
+                                    && (paramDesc.ModelMetadata == null || paramDesc.ModelMetadata.IsBindingAllowed)
+                                    && !paramDesc.IsPartOfCancellationToken()
+                                    && (paramDesc.Source == BindingSource.Body || paramDesc.Source == BindingSource.Form);
+                })
+                .ToList();
+
+            OpenApiRequestBody requestBody = null;
+            if (bodyParameterDescriptions.Any())
+            {
+                requestBody = CreateRequestBody(apiDescription.SupportedRequestMediaTypes().ToList(), bodyParameterDescriptions, schemaRegistry);
+            }
+
             var operation = new OpenApiOperation
             {
                 Tags = OpenApiDocumentConversionHelpers.CreateTags( new[] { _settings.TagSelector(apiDescription) }),
                 OperationId = apiDescription.FriendlyId(),
                 Parameters = parameters.Any() ? parameters : null, // parameters can be null but not empty
-                RequestBody = OpenApiDocumentConversionHelpers.CreateRequestBody(apiDescription.SupportedRequestMediaTypes().ToList()),
-                Responses = OpenApiDocumentConversionHelpers.CreateResponses(apiDescription.SupportedResponseMediaTypes().ToList()),
+                RequestBody = requestBody,
+                Responses = CreateResponses(responses, apiDescription.SupportedResponseMediaTypes().ToList()),
                 Deprecated = apiDescription.IsObsolete() ? true : false
             };
 
@@ -215,6 +231,55 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             return nonBodyParam;
         }
 
+
+        public static OpenApiRequestBody CreateRequestBody(List<string> mediaTypes,
+            IEnumerable<ApiParameterDescription> parameters = null,
+            ISchemaRegistry schemaRegistry = null )
+        {
+            if (parameters != null && parameters.Count() > 1)
+            {
+                var formBody = new OpenApiRequestBody();
+                var formSchema = new OpenApiSchema();
+                foreach (var formParam in parameters)
+                {
+                    var paramSchema = (formParam.Type == null) ? null : schemaRegistry.GetOrRegister(formParam.Type);
+                    formSchema.Properties.Add(formParam.Name, paramSchema);
+                }
+                string mediaType;
+                if (mediaTypes.Any())
+                {
+                    mediaType = mediaTypes.First();
+                } else
+                {
+                    mediaType = "application/x-www-form-urlencoded";
+                }
+                formBody.Content.Add(mediaType,new OpenApiMediaType {
+                    Schema = formSchema
+                });
+                return formBody;
+            }
+            OpenApiSchema schema = null;
+            if (parameters != null)
+            {
+                var paramDescription = parameters.First();
+                schema = (paramDescription.Type == null) ? null : schemaRegistry.GetOrRegister(paramDescription.Type);
+            }
+
+            var requestBody = new OpenApiRequestBody();
+            if (mediaTypes.Count > 0)
+            {
+                requestBody.Content = new Dictionary<string, OpenApiMediaType>();
+            }
+
+            foreach (var mediatype in mediaTypes)
+            {
+                requestBody.Content.Add(mediatype, new OpenApiMediaType() {
+                    Schema = schema
+                });
+            }
+            return requestBody;
+        }
+
         private string GetParameterLocation(ApiDescription apiDescription, ApiParameterDescription paramDescription)
         {
             if (paramDescription.Source == BindingSource.Form)
@@ -232,6 +297,34 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
             // Wanted to default to "body" for PUT/POST but ApiExplorer flattens out complex params into multiple
             // params for ALL non-bound params regardless of HttpMethod. So "query" across the board makes most sense
             return "query";
+        }
+
+        private static OpenApiResponses CreateResponses(Dictionary<string, OpenApiResponse> responses, List<string> mediaTypes)
+        {
+            var openApiResponses = new OpenApiResponses();
+            if (mediaTypes.Count > 0)
+            {
+                foreach (var responsePair in responses)
+                {
+                    if (responsePair.Value.Content == null)
+                    {
+                        responsePair.Value.Content = new Dictionary<string, OpenApiMediaType>();
+                        foreach (var mediatype in mediaTypes)
+                        {
+                            responsePair.Value.Content.Add(mediatype, new OpenApiMediaType());
+                        }
+                    }
+                    openApiResponses.Add(responsePair.Key, responsePair.Value);
+                }
+            }
+            else
+            {
+                foreach (var responsePair in responses)
+                {
+                    openApiResponses.Add(responsePair.Key, responsePair.Value);
+                }
+            }
+            return openApiResponses;
         }
 
         private OpenApiResponse CreateResponse(ApiResponseType apiResponseType, ISchemaRegistry schemaRegistry)

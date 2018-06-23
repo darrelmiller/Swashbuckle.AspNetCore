@@ -18,7 +18,7 @@ namespace Basic.Swagger
                 .FirstOrDefault(mediaType => mediaType == "multipart/form-data");
 
             if (formMediaType != null)
-                operation.RequestBody = OpenApiDocumentConversionHelpers.CreateRequestBody(new List<string> { formMediaType });
+                operation.RequestBody = SwaggerGenerator.CreateRequestBody(new List<string> { formMediaType });
         }
     }
 }

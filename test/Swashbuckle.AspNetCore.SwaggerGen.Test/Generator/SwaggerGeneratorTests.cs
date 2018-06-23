@@ -91,31 +91,31 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             Assert.NotNull(operation);
             Assert.Null(operation.RequestBody);
             Assert.Equal(new[] { "application/json", "text/json" }, operation.Responses.First().Value.Content.Keys.ToArray());
-            Assert.Null(operation.Deprecated);
+            Assert.False(operation.Deprecated);
             // PUT collection/{id}
             operation = swagger.Paths["/collection/{id}"].Operations[OperationType.Put];
             Assert.NotNull(operation);
             Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.RequestBody.Content.Keys.ToArray());
-            Assert.Empty(operation.Responses.First().Value.Content.Keys.ToArray());
-            Assert.Null(operation.Deprecated);
+            Assert.Empty(operation.Responses.First().Value.Content);
+            Assert.False(operation.Deprecated);
             // POST collection
             operation = swagger.Paths["/collection"].Operations[OperationType.Post];
             Assert.NotNull(operation);
             Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.RequestBody.Content.Keys.ToArray());
-            Assert.Empty(operation.Responses.First().Value.Content.Keys.ToArray());
-            Assert.Null(operation.Deprecated);
+            Assert.Empty(operation.Responses.First().Value.Content);
+            Assert.False(operation.Deprecated);
             // DELETE collection/{id}
             operation = swagger.Paths["/collection/{id}"].Operations[OperationType.Delete];
             Assert.NotNull(operation);
             Assert.Null(operation.RequestBody);
-            Assert.Empty(operation.Responses.First().Value.Content.ToArray());
-            Assert.Null(operation.Deprecated);
+            Assert.Empty(operation.Responses.First().Value.Content);
+            Assert.False(operation.Deprecated);
             // PATCH collection
             operation = swagger.Paths["/collection/{id}"].Operations[OperationType.Patch];
             Assert.NotNull(operation);
             Assert.Equal(new[] { "application/json", "text/json", "application/*+json" }, operation.RequestBody.Content.Keys.ToArray());
-            Assert.Empty(operation.Responses.SelectMany(r => r.Value.Content.Keys).ToArray());
-            Assert.Null(operation.Deprecated);
+            Assert.False(operation.Responses.Any(r => r.Value.Content.Any()));
+            Assert.False(operation.Deprecated);
         }
 
         [Theory]
@@ -151,7 +151,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
         [InlineData("collection/{param}", nameof(FakeActions.AcceptsStringFromRoute), "path")]
         [InlineData("collection", nameof(FakeActions.AcceptsStringFromQuery), "query")]
         [InlineData("collection", nameof(FakeActions.AcceptsStringFromHeader), "header")]
-        [InlineData("collection", nameof(FakeActions.AcceptsStringFromForm), "formData")]
+      // Need tests for formData request bodies  [InlineData("collection", nameof(FakeActions.AcceptsStringFromForm), "formData")]
         [InlineData("collection", nameof(FakeActions.AcceptsStringFromQuery), "query")]
         public void GetSwagger_GeneratesOpenApiParameters_ForPathQueryHeaderOrFormBoundParams(
             string routeTemplate,
@@ -343,7 +343,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             if (expectASchema)
                 Assert.NotNull(response.Content.First().Value.Schema);
             else
-                Assert.Null(response.Content.First().Value.Schema);
+                Assert.True(!response.Content.Any() || response.Content.First().Value.Schema == null);
         }
 
         [Fact]
@@ -358,7 +358,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             Assert.Equal(new[] { "204", "400" }, responses.Keys.ToArray());
             var response1 = responses["204"];
             Assert.Equal("Success", response1.Description);
-            Assert.Null(response1.Content.First().Value.Schema);
+            Assert.Empty(response1.Content);
             var response2 = responses["400"];
             Assert.Equal("Bad Request", response2.Description);
             Assert.NotNull(response2.Content.First().Value.Schema);
@@ -376,7 +376,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
             Assert.Equal(new[] { "204", "400" }, responses.Keys.ToArray());
             var response1 = responses["204"];
             Assert.Equal("Success", response1.Description);
-            Assert.Null(response1.Content.First().Value.Schema);
+            Assert.Empty(response1.Content);
             var response2 = responses["400"];
             Assert.Equal("Bad Request", response2.Description);
             Assert.NotNull(response2.Content.First().Value.Schema);
@@ -449,8 +449,8 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
                     Flows = new OpenApiOAuthFlows() {
                         AuthorizationCode = new OpenApiOAuthFlow()
                         {
-                            AuthorizationUrl = new Uri("https://tempuri.org/auth", UriKind.Relative),
-                            TokenUrl = new Uri("https://tempuri.org/token", UriKind.Relative),
+                            AuthorizationUrl = new Uri("https://tempuri.org/auth"),
+                            TokenUrl = new Uri("https://tempuri.org/token"),
                             Scopes = new Dictionary<string, string>
                             {
                                 { "read", "Read access to protected resources" },

@@ -11,16 +11,25 @@ namespace Swashbuckle.AspNetCore.Swagger.Model
     {
         public static void UpdateHost(this OpenApiDocument openApiDocument, string host)
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
         public static List<OpenApiTag> CreateTags(string[] tags)
         {
-            return new List<OpenApiTag>();
+            return tags.Select(t => new OpenApiTag() {
+                Name = t,
+                Reference = new OpenApiReference()
+                {
+                    Id = t,
+                    Type = ReferenceType.Tag
+                },
+                UnresolvedReference = false
+            }).ToList();
         }
 
         public static IDictionary<string, OpenApiMediaType> CreateContent(IEnumerable<string> mediaTypes, OpenApiSchema openApiSchema)
         {
+
             var content = new Dictionary<string, OpenApiMediaType>();
             foreach(var mediaType in mediaTypes)
             {
@@ -97,39 +106,6 @@ namespace Swashbuckle.AspNetCore.Swagger.Model
                 reqs.Add(openApiReq);
             }
             return reqs;
-        }
-
-        public static OpenApiRequestBody CreateRequestBody(List<string> mediaTypes)
-        {
-            var requestBody = new OpenApiRequestBody();
-            if (mediaTypes.Count > 0)
-            {
-                requestBody.Content = new Dictionary<string, OpenApiMediaType> ();
-            }
-            foreach (var mediatype in mediaTypes)
-            {
-                requestBody.Content.Add(mediatype, new OpenApiMediaType());
-            }
-            return requestBody;
-        }
-
-        public static OpenApiResponses CreateResponses(List<string> mediaTypes)
-        {
-            var responses = new OpenApiResponses();
-            var okResponse = new OpenApiResponse() {
-                Description = "Success",
-            };
-
-            if (mediaTypes.Count > 0)
-            {
-                okResponse.Content = new Dictionary<string, OpenApiMediaType>();
-            }
-            foreach (var mediatype in mediaTypes)
-            {
-                okResponse.Content.Add(mediatype, new OpenApiMediaType());
-            }
-            responses.Add("2XX", okResponse);
-            return responses;
         }
 
         public static ParameterLocation? CreateIn(string location)

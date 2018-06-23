@@ -43,7 +43,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen
 
             if (attribute.Type != null && attribute.Type != typeof(void))
             {
-                if (response.Content != null)
+                if (response.Content.Any())
                 {
                     // Apply schema to existing content objects
                     foreach (var mediaType in response.Content.Values)

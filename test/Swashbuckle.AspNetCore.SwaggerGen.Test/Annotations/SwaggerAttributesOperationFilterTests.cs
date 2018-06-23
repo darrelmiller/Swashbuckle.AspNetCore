@@ -22,7 +22,7 @@ namespace Swashbuckle.AspNetCore.SwaggerGen.Test
 
             Assert.Equal("CustomOperationId", operation.OperationId);
             Assert.Equal(new[] { "customTag" }, operation.Tags.Select(t=> t.Name).ToArray());
-            Assert.Equal(new[] { "customScheme" }, operation.Servers.Select(s => new Uri(s.Url).Scheme).ToArray());
+            Assert.Equal(new[] { "customscheme" }, operation.Servers.Select(s => new Uri(s.Url).Scheme).ToArray());
         }
 
         [Fact]
