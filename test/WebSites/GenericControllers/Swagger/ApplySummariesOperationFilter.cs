@@ -18,7 +18,7 @@ namespace GenericControllers.Swagger
             if (actionName == "Create")
             {
                 operation.Summary = $"Creates a {resourceName}";
-                operation.Parameters[0].Description = $"a {resourceName} representation";
+                operation.RequestBody.Description = $"a {resourceName} representation";
             }
             else if (actionName == "GetAll")
             {
@@ -32,7 +32,7 @@ namespace GenericControllers.Swagger
             {
                 operation.Summary = $"Updates a {resourceName} by unique id";
                 operation.Parameters[0].Description = $"a unique id for the {resourceName}";
-                operation.Parameters[1].Description = $"a {resourceName} representation";
+                operation.RequestBody.Description = $"a {resourceName} representation";
             }
             else if (actionName == "Delete")
             {

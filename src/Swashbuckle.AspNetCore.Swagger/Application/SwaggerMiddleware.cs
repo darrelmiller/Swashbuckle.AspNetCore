@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Newtonsoft.Json;
 using Microsoft.OpenApi.Models;
+using Microsoft.OpenApi.Writers;
 
 namespace Swashbuckle.AspNetCore.Swagger
 {
@@ -15,7 +16,6 @@ namespace Swashbuckle.AspNetCore.Swagger
     {
         private readonly RequestDelegate _next;
         private readonly ISwaggerProvider _swaggerProvider;
-        private readonly JsonSerializer _swaggerSerializer;
         private readonly SwaggerOptions _options;
         private readonly TemplateMatcher _requestMatcher;
 
@@ -27,7 +27,6 @@ namespace Swashbuckle.AspNetCore.Swagger
         {
             _next = next;
             _swaggerProvider = swaggerProvider;
-            _swaggerSerializer = SwaggerSerializerFactory.Create(mvcJsonOptions);
             _options = options;
             _requestMatcher = new TemplateMatcher(TemplateParser.Parse(options.RouteTemplate), new RouteValueDictionary());
         }
@@ -72,11 +71,12 @@ namespace Swashbuckle.AspNetCore.Swagger
         {
             response.StatusCode = 200;
             response.ContentType = "application/json";
-
+            
             var jsonBuilder = new StringBuilder();
             using (var writer = new StringWriter(jsonBuilder))
             {
-                _swaggerSerializer.Serialize(writer, swagger);
+                var openApiwriter = new OpenApiJsonWriter(writer);
+                swagger.SerializeAsV3(openApiwriter);
                 await response.WriteAsync(jsonBuilder.ToString(), new UTF8Encoding(false));
             }
         }

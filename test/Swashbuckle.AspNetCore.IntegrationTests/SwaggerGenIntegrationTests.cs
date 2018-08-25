@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.OpenApi.Readers;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -64,13 +66,13 @@ namespace Swashbuckle.AspNetCore.IntegrationTests
 
         private async Task AssertValidSwaggerAsync(HttpResponseMessage swaggerResponse)
         {
-            var validationResponse = await _validatorClient.PostAsync("/validator/debug", swaggerResponse.Content);
-
-            validationResponse.EnsureSuccessStatusCode();
-            var validationErrorsString = await validationResponse.Content.ReadAsStringAsync();
+            var reader = new OpenApiStreamReader();
+            var document = reader.Read(await swaggerResponse.Content.ReadAsStreamAsync(), out var diagnostic);
+         
+            var validationErrorsString = String.Join("\r",diagnostic.Errors.Select(e => e.Message));
             _output.WriteLine(validationErrorsString);
 
-            Assert.Equal("{}", validationErrorsString);
+            Assert.Empty(diagnostic.Errors);
         }
     }
 }
